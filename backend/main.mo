@@ -1,17 +1,16 @@
 import AccessControl "authorization/access-control";
 import Map "mo:core/Map";
-import Array "mo:core/Array";
 import List "mo:core/List";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Int "mo:core/Int";
-import Iter "mo:core/Iter";
+import Float "mo:core/Float";
+import Nat "mo:core/Nat";
+import Array "mo:core/Array";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
-import Nat "mo:core/Nat";
-import Float "mo:core/Float";
+import MixinStorage "blob-storage/Mixin";
 
 actor {
   include MixinStorage();
@@ -21,6 +20,8 @@ actor {
   type CoffeeId = Text;
   type CuppingId = Text;
   type QRCodeId = Text;
+
+  stable var admin : ?Principal = null;
 
   public type UserRole = AccessControl.UserRole;
 
@@ -122,12 +123,20 @@ actor {
     redemptionTimestamp : ?Timestamp;
   };
 
+  public type DailyStats = {
+    newUsers : Nat;
+    cuppingSubmissions : Nat;
+    qrCodesRedeemed : Nat;
+    cafesRegistered : Nat;
+  };
+
   // Storage
   let userProfiles = Map.empty<Principal, UserProfile>();
   let cafeProfiles = Map.empty<CafeId, CafeProfile>();
   let cuppingSubmissions = Map.empty<CuppingId, CuppingSubmission>();
   let qrCodes = Map.empty<QRCodeId, QRCodeData>();
-  let cafeOwners = Map.empty<Principal, CafeId>(); // Maps cafe owner principal to their cafe
+  let cafeOwners = Map.empty<Principal, CafeId>();
+  let dailyStats = Map.empty<Text, DailyStats>();
   var nextCafeId : Nat = 0;
   var nextCuppingId : Nat = 0;
   var nextQRCodeId : Nat = 0;
@@ -162,6 +171,78 @@ actor {
     cafeOwners.get(caller);
   };
 
+  func getCurrentDate() : Text {
+    let nanos = Time.now();
+    let daysSinceEpoch = nanos / (24 * 60 * 60 * 1_000_000_000);
+    let year = 1970 + (daysSinceEpoch / 365);
+    let dayOfYear = daysSinceEpoch % 365;
+    let month = (dayOfYear / 30) + 1;
+    let dayOfMonth = (dayOfYear % 30) + 1;
+    year.toText() # "-" # month.toText() # "-" # dayOfMonth.toText();
+  };
+
+  func incrementDailyStat(stat : Text) {
+    let currentDate = getCurrentDate();
+    let currentStats = switch (dailyStats.get(currentDate)) {
+      case (?stats) { stats };
+      case null {
+        {
+          newUsers = 0;
+          cuppingSubmissions = 0;
+          qrCodesRedeemed = 0;
+          cafesRegistered = 0;
+        };
+      };
+    };
+
+    let updatedStats = switch (stat) {
+      case ("newUsers") {
+        {
+          newUsers = currentStats.newUsers + 1;
+          cuppingSubmissions = currentStats.cuppingSubmissions;
+          qrCodesRedeemed = currentStats.qrCodesRedeemed;
+          cafesRegistered = currentStats.cafesRegistered;
+        };
+      };
+      case ("cuppingSubmissions") {
+        {
+          newUsers = currentStats.newUsers;
+          cuppingSubmissions = currentStats.cuppingSubmissions + 1;
+          qrCodesRedeemed = currentStats.qrCodesRedeemed;
+          cafesRegistered = currentStats.cafesRegistered;
+        };
+      };
+      case ("qrCodesRedeemed") {
+        {
+          newUsers = currentStats.newUsers;
+          cuppingSubmissions = currentStats.cuppingSubmissions;
+          qrCodesRedeemed = currentStats.qrCodesRedeemed + 1;
+          cafesRegistered = currentStats.cafesRegistered;
+        };
+      };
+      case ("cafesRegistered") {
+        {
+          newUsers = currentStats.newUsers;
+          cuppingSubmissions = currentStats.cuppingSubmissions;
+          qrCodesRedeemed = currentStats.qrCodesRedeemed;
+          cafesRegistered = currentStats.cafesRegistered + 1;
+        };
+      };
+      case (_) { currentStats };
+    };
+
+    dailyStats.add(currentDate, updatedStats);
+  };
+
+  // Admin check - persistent and upgrade safe.
+  // Returns true only when the caller's principal matches the stored admin principal.
+  public query ({ caller }) func isAdmin() : async Bool {
+    switch (admin) {
+      case (?adminPrincipal) { caller == adminPrincipal };
+      case (null) { false };
+    };
+  };
+
   // Authorization
   let accessControlState = AccessControl.initState();
 
@@ -174,6 +255,7 @@ actor {
   };
 
   public shared ({ caller }) func assignCallerUserRole(user : Principal, role : AccessControl.UserRole) : async () {
+    // Admin-only check happens inside AccessControl.assignRole
     AccessControl.assignRole(accessControlState, caller, user, role);
   };
 
@@ -190,7 +272,6 @@ actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    // Users can only view their own profile, admins can view any profile
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
@@ -202,6 +283,7 @@ actor {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
+    incrementDailyStat("newUsers");
   };
 
   // Cafe Management (Admin only for creation)
@@ -243,16 +325,15 @@ actor {
 
     cafeProfiles.add(cafeId, cafeProfile);
     cafeOwners.add(owner, cafeId);
+    incrementDailyStat("cafesRegistered");
     cafeProfile;
   };
 
   // Cafe Owner Functions
   public shared ({ caller }) func updateCafeFreeCups(cafeId : CafeId, availableFreeCups : Nat) : async () {
-    // Only cafe owner or admin can update
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only cafe owner or admin can update free cups");
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can update free cups");
     };
-
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
         let updatedCafe = {
@@ -275,11 +356,9 @@ actor {
   };
 
   public shared ({ caller }) func addCoffeeToCafe(cafeId : CafeId, coffee : Coffee) : async () {
-    // Only cafe owner or admin can add coffee
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only cafe owner or admin can add coffee");
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can add coffees");
     };
-
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
         let updatedCoffees = cafe.availableCoffees.concat([coffee]);
@@ -303,11 +382,9 @@ actor {
   };
 
   public shared ({ caller }) func removeCoffeeFromCafe(cafeId : CafeId, coffeeId : CoffeeId) : async () {
-    // Only cafe owner or admin can remove coffee
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only cafe owner or admin can remove coffee");
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can remove coffees");
     };
-
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
         let updatedCoffees = cafe.availableCoffees.filter(func(c) { c.id != coffeeId });
@@ -331,11 +408,6 @@ actor {
   };
 
   public query ({ caller }) func getCafeForOwner() : async ?CafeProfile {
-    // Cafe owners can view their own cafe
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can access this");
-    };
-
     switch (getCafeIdForOwner(caller)) {
       case (?cafeId) { cafeProfiles.get(cafeId) };
       case null { null };
@@ -343,11 +415,9 @@ actor {
   };
 
   public query ({ caller }) func getCuppingsForCafe(cafeId : CafeId) : async [CuppingSubmission] {
-    // Only cafe owner or admin can view cuppings for a cafe
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only cafe owner or admin can view cafe cuppings");
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can view cafe cuppings");
     };
-
     let cafeCuppings = List.empty<CuppingSubmission>();
     for ((id, cupping) in cuppingSubmissions.entries()) {
       if (cupping.cafe == cafeId) {
@@ -359,7 +429,6 @@ actor {
 
   // Public Cafe Discovery (no auth required)
   public query func getFilteredCafes(maxDistance : Float, minRoastLevel : Text) : async [CafeProfile] {
-    // Public access - anyone can browse cafes
     let cafes = List.empty<CafeProfile>();
     for ((id, cafe) in cafeProfiles.entries()) {
       cafes.add(cafe);
@@ -368,22 +437,17 @@ actor {
   };
 
   public query func getCafeProfile(cafeId : CafeId) : async ?CafeProfile {
-    // Public access - anyone can view cafe profiles
     cafeProfiles.get(cafeId);
   };
 
   // QR Code Management
   public shared ({ caller }) func generateQRCode(cafeId : CafeId, coffeeId : CoffeeId) : async QRCodeData {
-    // Only authenticated users can generate QR codes
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can generate QR codes");
     };
-
-    // Verify cafe exists
     switch (cafeProfiles.get(cafeId)) {
       case null { Runtime.trap("Cafe not found") };
       case (?cafe) {
-        // Verify cafe has available free cups
         if (cafe.availableFreeCups == 0) {
           Runtime.trap("No free cups available at this cafe");
         };
@@ -406,25 +470,16 @@ actor {
   };
 
   public shared ({ caller }) func redeemQRCode(qrCodeId : QRCodeId) : async () {
-    // Only cafe owner can redeem QR codes at their cafe
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can redeem QR codes");
-    };
-
     switch (qrCodes.get(qrCodeId)) {
       case null { Runtime.trap("QR code not found") };
       case (?qrCode) {
-        // Verify caller is the cafe owner
-        if (not isCafeOwner(caller, qrCode.cafe) and not AccessControl.isAdmin(accessControlState, caller)) {
+        if (not isCafeOwner(caller, qrCode.cafe)) {
           Runtime.trap("Unauthorized: Only cafe owner can redeem QR codes");
         };
-
-        // Verify QR code hasn't been redeemed
         if (qrCode.redeemed) {
           Runtime.trap("QR code already redeemed");
         };
 
-        // Update QR code as redeemed
         let updatedQRCode = {
           id = qrCode.id;
           user = qrCode.user;
@@ -436,7 +491,6 @@ actor {
         };
         qrCodes.add(qrCodeId, updatedQRCode);
 
-        // Decrease available free cups
         switch (cafeProfiles.get(qrCode.cafe)) {
           case (?cafe) {
             if (cafe.availableFreeCups > 0) {
@@ -456,12 +510,12 @@ actor {
           };
           case null {};
         };
+        incrementDailyStat("qrCodesRedeemed");
       };
     };
   };
 
   public query ({ caller }) func getQRCode(qrCodeId : QRCodeId) : async ?QRCodeData {
-    // Users can view their own QR codes, cafe owners can view QR codes for their cafe, admins can view all
     switch (qrCodes.get(qrCodeId)) {
       case null { null };
       case (?qrCode) {
@@ -481,30 +535,25 @@ actor {
     intensityLevels : IntensityLevels,
     photo : ?Storage.ExternalBlob
   ) : async () {
-    // Only authenticated users can submit cupping forms
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can submit forms");
+      Runtime.trap("Unauthorized: Only users can submit cupping forms");
     };
-
-    // Verify QR code exists and belongs to caller
     switch (qrCodes.get(qrCodeId)) {
       case null { Runtime.trap("QR code not found") };
       case (?qrCode) {
         if (qrCode.user != caller) {
           Runtime.trap("Unauthorized: QR code does not belong to you");
         };
-
         if (not qrCode.redeemed) {
           Runtime.trap("QR code must be redeemed before submitting cupping form");
         };
 
-        // Verify submission is within 24 hours
         let now = Time.now();
         let redemptionTime = switch (qrCode.redemptionTimestamp) {
           case (?t) { t };
           case null { Runtime.trap("QR code redemption timestamp not found") };
         };
-        let twentyFourHours : Int = 24 * 60 * 60 * 1_000_000_000; // 24 hours in nanoseconds
+        let twentyFourHours : Int = 24 * 60 * 60 * 1_000_000_000;
         if (now - redemptionTime > twentyFourHours) {
           Runtime.trap("Cupping form must be submitted within 24 hours of redemption");
         };
@@ -523,16 +572,15 @@ actor {
         };
 
         cuppingSubmissions.add(cuppingId, cuppingSubmission);
+        incrementDailyStat("cuppingSubmissions");
       };
     };
   };
 
   public query ({ caller }) func getCuppingsForUser(user : Principal) : async [CuppingSubmission] {
-    // Users can view their own cuppings, admins can view any user's cuppings
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own cuppings");
+      Runtime.trap("Unauthorized: Can only view your own cupping submissions");
     };
-
     let userCuppings = List.empty<CuppingSubmission>();
     for ((id, cupping) in cuppingSubmissions.entries()) {
       if (cupping.user == user) {
@@ -542,21 +590,17 @@ actor {
     userCuppings.toArray();
   };
 
-  // Profile viewing (public but with ownership check)
   public query ({ caller }) func getProfile(user : Principal) : async ?UserProfile {
-    // Anyone can view profiles, but this is a public query
-    // For sensitive data, use getUserProfile instead
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
     userProfiles.get(user);
   };
 
-  // Export data (cafe owner only)
   public query ({ caller }) func exportCafeData(cafeId : CafeId) : async Text {
-    // Only cafe owner or admin can export data
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only cafe owner or admin can export data");
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can export cafe data");
     };
-
-    // Generate CSV format
     var csv = "Cupping ID,User,Coffee,Fragrance,Flavor,Aftertaste,Acidity,Body,Balance,Uniformity,Sweetness,Clean Cup,Overall,Timestamp\n";
 
     for ((id, cupping) in cuppingSubmissions.entries()) {
@@ -581,12 +625,10 @@ actor {
     csv;
   };
 
-  // Admin functions
   public shared ({ caller }) func assignCafeOwner(cafeId : CafeId, owner : Principal) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can assign cafe owners");
     };
-
     switch (cafeProfiles.get(cafeId)) {
       case null { Runtime.trap("Cafe not found") };
       case (?cafe) {
@@ -607,10 +649,12 @@ actor {
     };
   };
 
-  // Dummy function for testing
-  public shared ({ caller }) func _dummyUpdateLocation(location : Location) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update locations");
+  public shared ({ caller }) func _dummyUpdateLocation(location : Location) : async () {};
+
+  public query ({ caller }) func getDailyStats() : async [(Text, DailyStats)] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admin can retrieve stats");
     };
+    dailyStats.toArray();
   };
 };

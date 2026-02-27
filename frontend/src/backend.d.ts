@@ -31,12 +31,27 @@ export interface CoffeeScores {
     uniformity: number;
     aftertaste: number;
 }
+export interface DailyStats {
+    qrCodesRedeemed: bigint;
+    newUsers: bigint;
+    cuppingSubmissions: bigint;
+    cafesRegistered: bigint;
+}
 export interface Coffee {
     id: CoffeeId;
     name: string;
     origin: string;
     flavorProfile: string;
     roastLevel: string;
+}
+export interface QRCodeData {
+    id: QRCodeId;
+    redemptionTimestamp?: Timestamp;
+    cafe: CafeId;
+    redeemed: boolean;
+    user: Principal;
+    timestamp: Timestamp;
+    coffee: CoffeeId;
 }
 export interface CafeProfile {
     id: CafeId;
@@ -49,16 +64,6 @@ export interface CafeProfile {
     location: Location;
     photos: Array<ExternalBlob>;
 }
-export interface QRCodeData {
-    id: QRCodeId;
-    redemptionTimestamp?: Timestamp;
-    cafe: CafeId;
-    redeemed: boolean;
-    user: Principal;
-    timestamp: Timestamp;
-    coffee: CoffeeId;
-}
-export type CafeId = string;
 export type CuppingId = string;
 export interface CuppingHistory {
     acidity: bigint;
@@ -73,6 +78,7 @@ export interface CuppingHistory {
     aftertaste: bigint;
 }
 export type CoffeeId = string;
+export type CafeId = string;
 export type QRCodeId = string;
 export interface CuppingSubmission {
     id: CuppingId;
@@ -125,11 +131,13 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getCuppingsForCafe(cafeId: CafeId): Promise<Array<CuppingSubmission>>;
     getCuppingsForUser(user: Principal): Promise<Array<CuppingSubmission>>;
+    getDailyStats(): Promise<Array<[string, DailyStats]>>;
     getFilteredCafes(maxDistance: number, minRoastLevel: string): Promise<Array<CafeProfile>>;
     getProfile(user: Principal): Promise<UserProfile | null>;
     getQRCode(qrCodeId: QRCodeId): Promise<QRCodeData | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     initializeAccessControl(): Promise<void>;
+    isAdmin(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     redeemQRCode(qrCodeId: QRCodeId): Promise<void>;
     removeCoffeeFromCafe(cafeId: CafeId, coffeeId: CoffeeId): Promise<void>;

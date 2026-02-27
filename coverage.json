@@ -1,0 +1,61 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-27T16:53:18.414Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 3,
+    "implemented": 2,
+    "items": [
+      {
+        "id": "REQ-6",
+        "summary": "In the backend (main.mo), ensure the admin/founder principal is reliably stored at canister initialization time (using the deployer's principal). Expose a stable query `isAdmin() : async Bool` that returns `true` only when the caller's principal matches the stored admin principal. Ensure this function works correctly after canister upgrades and does not reset the stored admin principal.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-7",
+        "summary": "In frontend/src/hooks/useQueries.ts, fix the `useIsAdmin` React Query hook so it correctly calls the backend `isAdmin()` query and returns the boolean result. Ensure the hook re-fetches when the authenticated actor changes and that errors are handled gracefully (defaulting to false).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-8",
+        "summary": "In frontend/src/pages/HomePage.tsx, update the Admin Dashboard tab visibility logic to use the result of the `useIsAdmin` hook. The Admin tab should only be rendered and visible when `isAdmin` is true. Display a clear visual indicator (e.g., a badge or label) on the Admin tab so the founder can confirm they have admin access after logging in.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/HomePage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/HomePage.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/HomePage.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "frontend/src/App.tsx": "Main application component with authentication flow, profile setup modal, and theme provider integration.",
-  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations including user profiles, cafes, QR codes, and cupping submissions with proper state management.",
+  "frontend/src/hooks/useQueries.ts": "React Query hooks for all backend operations; adds a new `useIsAdmin` hook that calls `actor.isAdmin()` (the stable deployer-principal check), includes the identity principal in the queryKey for automatic refetch on login/logout, defaults to false on error, and updates `useIsCallerAdmin` and `useGetDailyStats` to use the same pattern.",
   "frontend/src/components/Header.tsx": "Application header with branding, user authentication controls, and profile dropdown menu.",
   "frontend/src/components/Footer.tsx": "Simple footer component with copyright and caffeine.ai attribution.",
   "frontend/src/components/ProfileSetupModal.tsx": "Modal dialog for first-time user profile creation with name input.",
-  "frontend/src/pages/HomePage.tsx": "Main page component with deep link handling for QR codes and cafe profiles.",
+  "frontend/src/pages/HomePage.tsx": "Main page with tab navigation; the Admin Dashboard tab (with a ShieldCheck icon and star badge) is now conditionally rendered only when `useIsAdmin` returns true, and the tab grid column count adjusts accordingly.",
   "frontend/src/components/MapView.tsx": "Grid-based cafe discovery interface with filtering and cafe detail dialog integration.",
   "frontend/src/components/CafeDetailDialog.tsx": "Dialog showing cafe details, available coffees, and reservation code generation (displays code as text instead of QR image).",
   "frontend/src/components/UserProfile.tsx": "User profile dashboard displaying level, completed cuppings, accuracy, progress, cupping history, and a radar chart visualization of the user's most recent cupping submission.",
@@ -32,5 +32,6 @@
   "frontend/src/main.tsx": "Application entry point with standard React setup, ready for optional Capacitor integration via external configuration.",
   "README.md": "Project overview with quick start guide, one-command APK build instructions, deep link documentation, technology stack, and project structure for the My Cup coffee cupping Android application.",
   "CAPACITOR_INTEGRATION_NOTES.md": "Documentation explaining how to add Capacitor to the PWA after initial setup, including code examples for native features and build instructions.",
-  "android/gradlew": "Gradle wrapper shell script for Unix-based systems that enables running Gradle commands without requiring a system-wide Gradle installation."
+  "android/gradlew": "Gradle wrapper shell script for Unix-based systems that enables running Gradle commands without requiring a system-wide Gradle installation.",
+  "frontend/src/components/AdminDashboard.tsx": "Admin-only dashboard component that displays daily activity statistics for the last 7 days, including summary cards for totals, a Recharts bar chart visualizing four metrics (new users, cuppings, QR redemptions, new cafes), and a detailed per-day breakdown table with loading and error states."
 }

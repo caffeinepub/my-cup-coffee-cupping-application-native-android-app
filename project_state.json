@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 7,
+  "summary": "A React Native mobile app called 'My Cup' (caffeine/cup tracking) with an admin dashboard for viewing daily activity and usage statistics.",
+  "architectural_notes": [],
+  "known_issues": [
+    "Admin dashboard tab is inaccessible because the founder login/admin recognition flow is broken — users cannot identify themselves as the founder/admin"
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-add-a-new-admindashboard-tab-in-the-frontend-that-is-only-visible-when-the-authenticated-user-is-the-admin-the-tab-should-display-a-daily-activity-summary-showing-number-of-new-users-cupping-submissions-qr-redemptions-and-new-cafes-for-each-of-the-last-7-days-display-the-data-as-a-bar-chart-and-as-a-summary-table-with-date-rows",
+      "title": "Add a new AdminDashboard tab in the frontend that is only visible when the authenticated user is the admin. The tab should display a daily activity summary showing: number of new users, cupping submissions, QR redemptions, and new cafes for each of the last 7 days. Display the data as a bar chart and as a summary table with date rows.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-react-query-hook-in-usequeries-ts-to-call-the-backend-getdailystats-endpoint-and-expose-the-isadmin-check-as-a-query-so-the-frontend-can-conditionally-render-the-admin-dashboard-tab",
+      "title": "Add a React Query hook in useQueries.ts to call the backend getDailyStats endpoint and expose the isAdmin check as a query so the frontend can conditionally render the Admin Dashboard tab.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-homepage-tsx-remove-the-isadmin-guard-that-conditionally-hides-the-admin-dashboard-tab-the-admin-dashboard-tab-should-always-be-rendered-and-visible-in-the-tab-list-for-any-authenticated-user-regardless-of-the-admin-check-result",
+      "title": "In frontend/src/pages/HomePage.tsx, remove the isAdmin guard that conditionally hides the Admin Dashboard tab. The Admin Dashboard tab should always be rendered and visible in the tab list for any authenticated user, regardless of the admin check result.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-hooks-usequeries-ts-fix-the-useisadmin-react-query-hook-so-it-correctly-calls-the-backend-isadmin-query-and-returns-the-boolean-result-ensure-the-hook-re-fetches-when-the-authenticated-actor-changes-and-that-errors-are-handled-gracefully-defaulting-to-false",
+      "title": "In frontend/src/hooks/useQueries.ts, fix the `useIsAdmin` React Query hook so it correctly calls the backend `isAdmin()` query and returns the boolean result. Ensure the hook re-fetches when the authenticated actor changes and that errors are handled gracefully (defaulting to false).",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-pages-homepage-tsx-update-the-admin-dashboard-tab-visibility-logic-to-use-the-result-of-the-useisadmin-hook-the-admin-tab-should-only-be-rendered-and-visible-when-isadmin-is-true-display-a-clear-visual-indicator-e-g-a-badge-or-label-on-the-admin-tab-so-the-founder-can-confirm-they-have-admin-access-after-logging-in",
+      "title": "In frontend/src/pages/HomePage.tsx, update the Admin Dashboard tab visibility logic to use the result of the `useIsAdmin` hook. The Admin tab should only be rendered and visible when `isAdmin` is true. Display a clear visual indicator (e.g., a badge or label) on the Admin tab so the founder can confirm they have admin access after logging in.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Admin dashboard showing daily activity and usage statistics for the app",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Add backend tracking for daily activity statistics: record daily counts of new user registrations, cupping submissions, QR code reservations redeemed, and new cafes registered. Store these stats keyed by date (YYYY-MM-DD format) so they can be queried per day.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Add an admin access control mechanism in the backend. Designate the canister deployer (the initial principal) as the admin. Expose a query to check if the caller is an admin, and gate the daily stats query endpoint so only the admin principal can retrieve it.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Make the Admin Dashboard tab always visible (not hidden behind admin check) so the user can access and explore it directly",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Fix founder/admin login flow so the user can authenticate as the founder/admin and gain access to the admin dashboard tab",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "In the backend (main.mo), ensure the admin/founder principal is reliably stored at canister initialization time (using the deployer's principal). Expose a stable query `isAdmin() : async Bool` that returns `true` only when the caller's principal matches the stored admin principal. Ensure this function works correctly after canister upgrades and does not reset the stored admin principal.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "My Cup",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

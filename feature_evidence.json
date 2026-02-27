@@ -1,0 +1,49 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-in-frontend-src-hooks-usequeries-ts-fix-the-useisadmin-react-query-hook-so-it-correctly-calls-the-backend-isadmin-query-and-returns-the-boolean-result-ensure-the-hook-re-fetches-when-the-authenticated-actor-changes-and-that-errors-are-handled-gracefully-defaulting-to-false",
+      "featureTitle": "In frontend/src/hooks/useQueries.ts, fix the `useIsAdmin` React Query hook so it correctly calls the backend `isAdmin()` query and returns the boolean result. Ensure the hook re-fetches when the authenticated actor changes and that errors are handled gracefully (defaulting to false).",
+      "files": [
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "authorization@3.0.0",
+        "blob-storage@4.0.0",
+        "qr-code@1.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-7"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-frontend-src-pages-homepage-tsx-update-the-admin-dashboard-tab-visibility-logic-to-use-the-result-of-the-useisadmin-hook-the-admin-tab-should-only-be-rendered-and-visible-when-isadmin-is-true-display-a-clear-visual-indicator-e-g-a-badge-or-label-on-the-admin-tab-so-the-founder-can-confirm-they-have-admin-access-after-logging-in",
+      "featureTitle": "In frontend/src/pages/HomePage.tsx, update the Admin Dashboard tab visibility logic to use the result of the `useIsAdmin` hook. The Admin tab should only be rendered and visible when `isAdmin` is true. Display a clear visual indicator (e.g., a badge or label) on the Admin tab so the founder can confirm they have admin access after logging in.",
+      "files": [
+        "frontend/src/pages/HomePage.tsx"
+      ],
+      "components": [
+        "authorization@3.0.0",
+        "blob-storage@4.0.0",
+        "qr-code@1.0.0",
+        "camera@1.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-8"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

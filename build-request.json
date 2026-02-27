@@ -1,0 +1,79 @@
+{
+  "kind": "build_request",
+  "title": "Fix founder/admin recognition so the authenticated user can access the Admin Dashboard",
+  "projectName": "My Cup",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-6",
+      "text": "In the backend (main.mo), ensure the admin/founder principal is reliably stored at canister initialization time (using the deployer's principal). Expose a stable query `isAdmin() : async Bool` that returns `true` only when the caller's principal matches the stored admin principal. Ensure this function works correctly after canister upgrades and does not reset the stored admin principal.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "i cannot login as a founder and notify that im a founder so i can open the dashboard"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The admin principal is captured from the deployer at first initialization and persisted in stable storage.",
+        "Calling isAdmin() as the deployer principal returns true.",
+        "Calling isAdmin() as any other principal returns false.",
+        "The admin principal is NOT reset on canister upgrade."
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "text": "In frontend/src/hooks/useQueries.ts, fix the `useIsAdmin` React Query hook so it correctly calls the backend `isAdmin()` query and returns the boolean result. Ensure the hook re-fetches when the authenticated actor changes and that errors are handled gracefully (defaulting to false).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "i cannot login as a founder and notify that im a founder so i can open the dashboard"
+        ]
+      },
+      "acceptanceCriteria": [
+        "useIsAdmin returns true when the authenticated user is the deployer/admin principal.",
+        "useIsAdmin returns false for non-admin users.",
+        "The hook refetches automatically when the actor (identity) changes.",
+        "On error, the hook defaults to false without crashing."
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "text": "In frontend/src/pages/HomePage.tsx, update the Admin Dashboard tab visibility logic to use the result of the `useIsAdmin` hook. The Admin tab should only be rendered and visible when `isAdmin` is true. Display a clear visual indicator (e.g., a badge or label) on the Admin tab so the founder can confirm they have admin access after logging in.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "i cannot login as a founder and notify that im a founder so i can open the dashboard"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Admin Dashboard tab is visible in the tab list only when the authenticated user is the admin.",
+        "Non-admin authenticated users do not see the Admin Dashboard tab.",
+        "After logging in as the founder/deployer, the Admin tab appears without requiring a page reload.",
+        "The tab includes a visual cue (badge or distinct label) confirming admin access."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "The admin principal must be stored in stable variables so it survives canister upgrades.",
+    "All Motoko logic must remain in the single actor in backend/main.mo."
+  ],
+  "nonGoals": [
+    "Adding additional admin roles or multi-admin support.",
+    "Changing the daily stats data model or getDailyStats endpoint behavior.",
+    "Modifying the AdminDashboard component UI beyond tab visibility."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix founder/admin recognition for Admin Dashboard access",
+  "requirements": [
+    {
+      "id": "REQ-7",
+      "summary": "Fix the useIsAdmin React Query hook to correctly call backend isAdmin() and handle identity changes",
+      "acceptanceCriteria": [
+        "useIsAdmin returns true when the authenticated user is the deployer/admin principal.",
+        "useIsAdmin returns false for non-admin users.",
+        "The hook refetches automatically when the actor (identity) changes.",
+        "On error, the hook defaults to false without crashing."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Fix the useIsAdmin hook implementation to correctly call actor.isAdmin() backend query. Ensure the hook is enabled only when the actor is available and not fetching. Add proper error handling that defaults to false on failure. Configure the query to refetch when the actor changes by including actor in the queryKey dependency array. Return isLoading state that accounts for both actor fetching and query loading states, similar to the useGetCallerUserProfile pattern."
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Update HomePage Admin tab visibility to use useIsAdmin hook with visual admin indicator",
+      "acceptanceCriteria": [
+        "The Admin Dashboard tab is visible in the tab list only when the authenticated user is the admin.",
+        "Non-admin authenticated users do not see the Admin Dashboard tab.",
+        "After logging in as the founder/deployer, the Admin tab appears without requiring a page reload.",
+        "The tab includes a visual cue (badge or distinct label) confirming admin access."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/HomePage.tsx",
+          "operation": "modify",
+          "description": "Import and call the useIsAdmin hook at the component top level. Use the isAdmin result (not isLoading state) to conditionally render the Admin Dashboard tab in the Tabs component. Only include the Admin tab trigger and content when isAdmin is true. Add a visual badge or distinct styling (e.g., a small 'Admin' badge using shadcn/ui Badge component or a distinctive icon) next to the Admin tab label to clearly indicate admin access. Ensure the tab list updates reactively when the isAdmin state changes after login without requiring a page reload."
+        }
+      ]
+    }
+  ]
+}

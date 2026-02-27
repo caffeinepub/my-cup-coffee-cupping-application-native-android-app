@@ -1,22 +1,46 @@
 import { useState, useEffect } from 'react';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useGetCallerUserProfile, useGetCafeForOwner } from '../hooks/useQueries';
+import {
+  useGetCallerUserProfile,
+  useGetCafeForOwner,
+  useIsAdmin,
+} from '../hooks/useQueries';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import MapView from '../components/MapView';
 import UserProfile from '../components/UserProfile';
 import CafeDashboard from '../components/CafeDashboard';
 import CuppingForm from '../components/CuppingForm';
 import QRCodeScanner from '../components/QRCodeScanner';
-import { Coffee, Map, User, Store, ClipboardList, QrCode } from 'lucide-react';
+import AdminDashboard from '../components/AdminDashboard';
+import { Coffee, Map, User, Store, ClipboardList, QrCode, BarChart2, ShieldCheck } from 'lucide-react';
 
 export default function HomePage() {
   const { identity } = useInternetIdentity();
   const { data: userProfile } = useGetCallerUserProfile();
   const { data: cafeProfile } = useGetCafeForOwner();
+  const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const [activeTab, setActiveTab] = useState('map');
 
   const isAuthenticated = !!identity;
   const isCafeOwner = !!cafeProfile;
+
+  // Determine number of columns for the tab grid
+  // map, profile, cupping, scanner are always present (4)
+  // cafe dashboard is conditional on isCafeOwner
+  // admin tab is conditional on isAdmin
+  let colCount = 4;
+  if (isCafeOwner) colCount++;
+  if (isAdmin) colCount++;
+
+  const gridColsClass =
+    colCount <= 3
+      ? 'grid-cols-3'
+      : colCount === 4
+        ? 'grid-cols-4'
+        : colCount === 5
+          ? 'grid-cols-5'
+          : 'grid-cols-6';
 
   // Handle deep links
   useEffect(() => {
@@ -25,7 +49,6 @@ export default function HomePage() {
     if (deepLinkQR) {
       sessionStorage.removeItem('deeplink_qr');
       setActiveTab('cupping');
-      // The CuppingForm component will need to handle this
     }
 
     // Check for cafe deep link
@@ -33,9 +56,15 @@ export default function HomePage() {
     if (deepLinkCafe) {
       sessionStorage.removeItem('deeplink_cafe');
       setActiveTab('map');
-      // The MapView component will need to handle this
     }
   }, []);
+
+  // If the active tab is 'admin' but the user is no longer admin, switch to map
+  useEffect(() => {
+    if (!isAdminLoading && !isAdmin && activeTab === 'admin') {
+      setActiveTab('map');
+    }
+  }, [isAdmin, isAdminLoading, activeTab]);
 
   if (!isAuthenticated) {
     return (
@@ -46,9 +75,7 @@ export default function HomePage() {
           <p className="mt-4 text-lg text-muted-foreground">
             Discover participating cafes, submit cupping forms, and track your coffee journey.
           </p>
-          <p className="mt-2 text-muted-foreground">
-            Please login to get started.
-          </p>
+          <p className="mt-2 text-muted-foreground">Please login to get started.</p>
         </div>
       </div>
     );
@@ -61,7 +88,7 @@ export default function HomePage() {
   return (
     <div className="container py-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5">
+        <TabsList className={`grid w-full ${gridColsClass}`}>
           <TabsTrigger value="map">
             <Map className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Map</span>
@@ -84,6 +111,18 @@ export default function HomePage() {
             <QrCode className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Scanner</span>
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="admin" className="relative">
+              <ShieldCheck className="mr-1 h-4 w-4 text-primary" />
+              <span className="hidden sm:inline">Admin</span>
+              <Badge
+                variant="secondary"
+                className="ml-1 hidden h-4 px-1 py-0 text-[10px] leading-4 sm:inline-flex"
+              >
+                ★
+              </Badge>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="map" className="mt-6">
@@ -107,6 +146,12 @@ export default function HomePage() {
         <TabsContent value="scanner" className="mt-6">
           <QRCodeScanner />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="admin" className="mt-6">
+            <AdminDashboard />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -8,12 +8,13 @@
     "blob-storage": "4.0.0",
     "qr-code": "1.0.0",
     "camera": "1.0.0",
-    "core-infrastructure": "1.0.1",
+    "core-infrastructure": "1.0.2",
     "shadcn-ui": "1.0.0",
     "build-template-react": "1.0.0",
-    "initial-app": "1.0.0"
+    "initial-app": "1.0.0",
+    "github-export-icp-cli": "1.0.0"
   },
-  "aiCoreVersion": "0.18.12",
+  "aiCoreVersion": "0.20.4",
   "motokoVersion": "1.0.0-beta",
   "coreLibVersion": "implicits-20",
   "tags": []

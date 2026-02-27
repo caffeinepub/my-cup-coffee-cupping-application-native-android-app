@@ -12,6 +12,7 @@ import type {
   CafeId,
   CoffeeId,
   QRCodeId,
+  DailyStats,
 } from '../backend';
 import { ExternalBlob } from '../backend';
 import { Principal } from '@icp-sdk/core/principal';
@@ -282,16 +283,73 @@ export function useExportCafeData() {
 }
 
 // Admin Queries
+
+/**
+ * Checks whether the currently authenticated caller is the deployer/founder admin.
+ * Uses actor.isAdmin() which checks the stable `admin` principal stored in the backend.
+ * The identity principal is included in the queryKey so the query refetches on login/logout.
+ */
+export function useIsAdmin() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const principalStr = identity?.getPrincipal().toString() ?? null;
+
+  const query = useQuery<boolean>({
+    // Include principalStr so the query re-runs whenever the logged-in user changes
+    queryKey: ['isAdmin', principalStr],
+    queryFn: async () => {
+      if (!actor) return false;
+      try {
+        return await actor.isAdmin();
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isAdmin: query.data ?? false,
+    isLoading: actorFetching || query.isLoading,
+  };
+}
+
+/**
+ * @deprecated Use useIsAdmin instead. Kept for backward compatibility.
+ */
 export function useIsCallerAdmin() {
   const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
 
   return useQuery<boolean>({
-    queryKey: ['isAdmin'],
+    queryKey: ['isCallerAdmin', identity?.getPrincipal().toString() ?? null],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      try {
+        return await actor.isAdmin();
+      } catch {
+        return false;
+      }
     },
-    enabled: !!actor && !isFetching && !!identity,
+    enabled: !!actor && !isFetching,
+    retry: false,
+  });
+}
+
+export function useGetDailyStats() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const { isAdmin } = useIsAdmin();
+
+  return useQuery<Array<[string, DailyStats]>>({
+    queryKey: ['dailyStats'],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getDailyStats();
+    },
+    enabled: !!actor && !isFetching && !!identity && isAdmin,
   });
 }
