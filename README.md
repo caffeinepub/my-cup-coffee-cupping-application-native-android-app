@@ -1,2 +1,7 @@
-# my-cup-coffee-cupping-application-native-android-app
-Exported from Caffeine project: My Cup Coffee Cupping Application   Native Android App
+## 
+
+This source code has been exported from [Caffeine](https://caffeine.ai/)
+
+### Coming Soon
+
+We are working on tools to help you build locally and deploy your apps back to caffeine.

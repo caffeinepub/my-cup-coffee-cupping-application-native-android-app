@@ -1,0 +1,2 @@
+/* Entry point CSS — imports the main stylesheet from src/ */
+@import "./src/index.css";
