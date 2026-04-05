@@ -7,8 +7,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Award, Calendar, Coffee, TrendingUp } from "lucide-react";
+import {
+  Award,
+  Calendar,
+  CheckCircle2,
+  Coffee,
+  Copy,
+  TrendingUp,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Level } from "../backend";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetCallerUserProfile,
   useGetCuppingsForUser,
@@ -18,6 +28,25 @@ import CuppingRadarChart from "./CuppingRadarChart";
 export default function UserProfile() {
   const { data: profile } = useGetCallerUserProfile();
   const { data: cuppings } = useGetCuppingsForUser();
+  const { identity } = useInternetIdentity();
+  const [copied, setCopied] = useState(false);
+
+  const principalId = identity?.getPrincipal().toString() ?? "";
+
+  const truncatedPrincipal = principalId
+    ? `${principalId.slice(0, 10)}...${principalId.slice(-5)}`
+    : "";
+
+  const handleCopy = async () => {
+    if (!principalId) return;
+    try {
+      await navigator.clipboard.writeText(principalId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
 
   if (!profile) {
     return null;
@@ -49,6 +78,42 @@ export default function UserProfile() {
           Track your coffee cupping journey
         </p>
       </div>
+
+      {/* Principal ID badge — shown at the top of the profile */}
+      {principalId && (
+        <div
+          data-ocid="profile.card"
+          className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+        >
+          <div className="shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+            <Coffee className="h-4 w-4 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-0.5">
+              My Cup ID
+            </p>
+            <p
+              className="font-mono text-sm text-amber-900 truncate"
+              data-ocid="profile.panel"
+            >
+              {truncatedPrincipal}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            data-ocid="profile.secondary_button"
+            aria-label="Copy My Cup ID"
+            className="shrink-0 p-1.5 rounded-lg text-amber-600 hover:bg-amber-100 transition-colors"
+          >
+            {copied ? (
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>

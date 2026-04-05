@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
 import { ThemeProvider } from "next-themes";
 import Header from "./components/Header";
-import ProfileSetupModal from "./components/ProfileSetupModal";
+import WelcomeRegistrationPage from "./components/WelcomeRegistrationPage";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "./hooks/useQueries";
 import HomePage from "./pages/HomePage";
@@ -41,7 +41,7 @@ export default function App() {
           <main className="flex-1">
             <HomePage />
           </main>
-          {showProfileSetup && <ProfileSetupModal />}
+          {showProfileSetup && <WelcomeRegistrationPage />}
           <Toaster />
         </div>
       </div>

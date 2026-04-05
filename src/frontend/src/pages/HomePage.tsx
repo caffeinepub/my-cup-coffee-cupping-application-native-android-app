@@ -7,7 +7,7 @@ import {
   Store,
   User,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminDashboard from "../components/AdminDashboard";
 import CafeDashboard from "../components/CafeDashboard";
 import CuppingForm from "../components/CuppingForm";
@@ -40,6 +40,9 @@ export default function HomePage() {
   // When true: show the map view inline (for unauthenticated guest from landing page)
   const [guestMapOpen, setGuestMapOpen] = useState(false);
 
+  // Ref to ensure auto-navigate to profile fires only once per login session
+  const hasAutoNavigated = useRef(false);
+
   const isAuthenticated = !!identity;
   const isCafeOwner = !!cafeProfile;
 
@@ -62,6 +65,21 @@ export default function HomePage() {
       setActiveTab("map");
     }
   }, [isAdmin, isAdminLoading, activeTab]);
+
+  // Auto-navigate returning users to their Profile tab on login
+  useEffect(() => {
+    if (isAuthenticated && userProfile && !hasAutoNavigated.current) {
+      hasAutoNavigated.current = true;
+      setActiveTab("profile");
+    }
+  }, [isAuthenticated, userProfile]);
+
+  // Reset auto-navigate flag when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      hasAutoNavigated.current = false;
+    }
+  }, [isAuthenticated]);
 
   // Unauthenticated: show landing page or guest map view
   if (!isAuthenticated) {
