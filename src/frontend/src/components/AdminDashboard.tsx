@@ -213,8 +213,8 @@ export default function AdminDashboard() {
               Seed 5 Demo Cafes
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Adds 5 example cafes across Kuala Lumpur with coffees and slots —
-              great for testing the map and cupping flow.
+              Adds 5 example cafes across Bandung, West Java with coffees and
+              slots — great for testing the map and cupping flow.
             </p>
           </div>
         </div>

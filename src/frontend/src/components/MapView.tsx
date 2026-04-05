@@ -194,7 +194,7 @@ export default function MapView() {
       () => {
         // Geolocation denied or unavailable — fall back to KL default
         setGpsStatus("denied");
-        setUserLocation([3.139, 101.6869]);
+        setUserLocation([-6.9147, 107.6098]);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
     );
@@ -258,8 +258,8 @@ export default function MapView() {
       ).toLocaleString()
     : null;
 
-  // Default map center: Kuala Lumpur
-  const mapCenter: [number, number] = userLocation ?? [3.139, 101.6869];
+  // Default map center: Bandung, West Java
+  const mapCenter: [number, number] = userLocation ?? [-6.9147, 107.6098];
 
   return (
     <div
