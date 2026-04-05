@@ -198,7 +198,11 @@ const cafePlans = [
 type ModalType = "reviews" | "cafes" | "levels" | null;
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
-export default function LandingPage() {
+interface LandingPageProps {
+  onOpenMap?: () => void;
+}
+
+export default function LandingPage({ onOpenMap }: LandingPageProps) {
   const { login, loginStatus } = useInternetIdentity();
   const isLoggingIn = loginStatus === "logging-in";
   const [openModal, setOpenModal] = useState<ModalType>(null);
@@ -406,7 +410,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   data-ocid={featureOcids[0]}
-                  onClick={handleLogin}
+                  onClick={onOpenMap ?? handleLogin}
                   className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-chart-2/40 hover:shadow-chart-2/10 cursor-pointer text-left w-full"
                 >
                   <div

@@ -37,6 +37,8 @@ export default function HomePage() {
   const { data: cafeProfile } = useGetCafeForOwner();
   const { isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const [activeTab, setActiveTab] = useState<TabId>("map");
+  // When true: show the map view inline (for unauthenticated guest from landing page)
+  const [guestMapOpen, setGuestMapOpen] = useState(false);
 
   const isAuthenticated = !!identity;
   const isCafeOwner = !!cafeProfile;
@@ -61,8 +63,28 @@ export default function HomePage() {
     }
   }, [isAdmin, isAdminLoading, activeTab]);
 
+  // Unauthenticated: show landing page or guest map view
   if (!isAuthenticated) {
-    return <LandingPage />;
+    if (guestMapOpen) {
+      return (
+        <div className="relative flex flex-col min-h-[calc(100vh-3.5rem)]">
+          {/* Back button */}
+          <div className="p-4 pb-0">
+            <button
+              type="button"
+              onClick={() => setGuestMapOpen(false)}
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-2"
+            >
+              ← Back to Home
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto pb-6 px-4">
+            <MapView />
+          </div>
+        </div>
+      );
+    }
+    return <LandingPage onOpenMap={() => setGuestMapOpen(true)} />;
   }
 
   if (!userProfile) {
