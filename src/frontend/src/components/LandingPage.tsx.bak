@@ -36,7 +36,7 @@ const features = [
     icon: ClipboardList,
     title: "Submit Reviews",
     description:
-      "Enjoy your coffee mindfully, then score fragrance, aroma, flavor, body, acidity, aftertaste, sweetness, and balance using the industry-standard SCA cupping form.",
+      "Log fragrance, flavor, body, acidity, and balance using the industry-standard SCA cupping form with an interactive flavor wheel.",
     color: "text-primary",
     bg: "bg-primary/10",
   },
@@ -59,8 +59,8 @@ const steps = [
   },
   {
     num: "02",
-    title: "Taste & Submit",
-    body: "Fill in the SCA cupping form — scoring aroma, body, acidity, aftertaste, sweetness, and balance — to earn your free cup.",
+    title: "Taste & Submit Within 24 Hours",
+    body: "Enjoy your coffee mindfully, then fill in the digital cupping form — scoring aroma, body, acidity, aftertaste, sweetness, and overall balance.",
   },
   {
     num: "03",
