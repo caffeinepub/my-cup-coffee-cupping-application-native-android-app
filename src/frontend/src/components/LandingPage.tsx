@@ -257,6 +257,12 @@ export default function LandingPage() {
     },
   ];
 
+  const featureOcids = [
+    "landing.feature.item.1",
+    "landing.feature.item.2",
+    "landing.feature.item.3",
+  ] as const;
+
   return (
     <div className="w-full overflow-x-hidden">
       {/* ── Hero — fills full mobile viewport ────────────────────────────── */}
@@ -420,58 +426,44 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* ── Paired card rows — same height per row via CSS grid ───── */}
-          <div
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8"
-            style={{ gridAutoRows: "1fr" }}
-          >
+          {/* ── Paired card rows — feat0, step0, feat1, step1, feat2, step2 ── */}
+          {/* With grid-cols-2, this flat interleaved order fills left→right, row by row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {features.map((feat, i) => {
               const step = steps[i];
-              const featureOcids = [
-                "landing.feature.item.1",
-                "landing.feature.item.2",
-                "landing.feature.item.3",
-              ] as const;
-
-              return (
-                <>
-                  {/* Feature card — left column */}
+              return [
+                /* Feature card — left column */
+                <div
+                  key={`feat-${feat.title}`}
+                  data-ocid={featureOcids[i]}
+                  className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
+                >
                   <div
-                    key={`feat-${feat.title}`}
-                    data-ocid={featureOcids[i]}
-                    className="group relative rounded-2xl border border-border bg-card p-7 h-full flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
+                    className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
                   >
-                    <div
-                      className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
-                    >
-                      <feat.icon className={`h-6 w-6 ${feat.color}`} />
-                    </div>
-                    <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                      {feat.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                      {feat.description}
-                    </p>
+                    <feat.icon className={`h-6 w-6 ${feat.color}`} />
                   </div>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                    {feat.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {feat.description}
+                  </p>
+                </div>,
 
-                  {/* Step card — right column */}
-                  <div
-                    key={`step-${step.num}`}
-                    className="group rounded-2xl border border-border bg-card p-6 sm:p-8 h-full flex flex-col transition-all duration-300 hover:border-primary/30 hover:shadow-md"
-                  >
-                    {/* Step number — large decorative label above title */}
-                    <p className="font-display text-4xl font-black text-primary/40 leading-none mb-2 tracking-tight shrink-0">
-                      {step.num}
-                    </p>
-                    <h3 className="font-display text-lg font-bold text-foreground mb-2">
-                      {step.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                      {step.body}
-                    </p>
-                  </div>
-                </>
-              );
+                /* Step card — right column */
+                <div
+                  key={`step-${step.num}`}
+                  className="group rounded-2xl border border-border bg-card p-6 sm:p-8 flex flex-col transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                >
+                  <h3 className="font-display text-lg font-bold text-foreground mb-2">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {step.body}
+                  </p>
+                </div>,
+              ];
             })}
           </div>
         </div>
