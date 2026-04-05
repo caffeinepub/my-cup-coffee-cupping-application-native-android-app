@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,12 +19,13 @@ import {
 import {
   AlertCircle,
   Coffee,
+  FlaskConical,
   QrCode,
   Store,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -35,7 +37,7 @@ import {
   YAxis,
 } from "recharts";
 import type { DailyStats } from "../backend";
-import { useGetDailyStats } from "../hooks/useQueries";
+import { useGetDailyStats, useSeedDemoCafes } from "../hooks/useQueries";
 
 interface DayData {
   date: string;
@@ -101,6 +103,14 @@ function SummaryCard({
 
 export default function AdminDashboard() {
   const { data: rawStats, isLoading, isError } = useGetDailyStats();
+  const seedMutation = useSeedDemoCafes();
+  const [seeded, setSeeded] = useState(false);
+
+  const handleSeed = () => {
+    seedMutation.mutate(undefined, {
+      onSuccess: () => setSeeded(true),
+    });
+  };
 
   const chartData = useMemo<DayData[]>(() => {
     const last7Days = generateLast7Days();
@@ -192,6 +202,35 @@ export default function AdminDashboard() {
         <Badge variant="secondary" className="ml-auto">
           Admin Only
         </Badge>
+      </div>
+
+      {/* Seed Demo Cafes */}
+      <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <FlaskConical className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold text-sm text-foreground">
+              Seed 5 Demo Cafes
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Adds 5 example cafes across Kuala Lumpur with coffees and slots —
+              great for testing the map and cupping flow.
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant={seeded ? "secondary" : "default"}
+          disabled={seedMutation.isPending || seeded}
+          onClick={handleSeed}
+          className="shrink-0"
+        >
+          {seedMutation.isPending
+            ? "Seeding…"
+            : seeded
+              ? "Seeded ✓"
+              : "Seed Now"}
+        </Button>
       </div>
 
       {/* Summary Cards */}

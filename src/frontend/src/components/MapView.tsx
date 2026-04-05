@@ -31,8 +31,8 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { CafeProfile, Coffee as CoffeeType, QRCodeData } from "../backend";
 import { useGenerateQRCode, useGetFilteredCafes } from "../hooks/useQueries";
 
@@ -82,6 +82,27 @@ function haversineKm(
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Map Center Controller ────────────────────────────────────────────────
+// Flies to the user's position once when GPS first resolves.
+
+function MapCenterController({
+  position,
+}: {
+  position: [number, number] | null;
+}) {
+  const map = useMap();
+  const hasCentered = useRef(false);
+
+  useEffect(() => {
+    if (position && !hasCentered.current) {
+      hasCentered.current = true;
+      map.flyTo(position, 14, { animate: true, duration: 1.5 });
+    }
+  }, [position, map]);
+
+  return null;
 }
 
 // ── Slot Legend ────────────────────────────────────────────────────────────
@@ -145,6 +166,9 @@ export default function MapView() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
   );
+  const [gpsStatus, setGpsStatus] = useState<"locating" | "live" | "denied">(
+    "locating",
+  );
   const [selectedCafe, setSelectedCafe] = useState<CafeProfile | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [distanceKm, setDistanceKm] = useState(50);
@@ -155,19 +179,30 @@ export default function MapView() {
     null,
   );
 
-  // Request user location on mount
-  useState(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation([pos.coords.latitude, pos.coords.longitude]);
-        },
-        () => {
-          // User denied or unavailable — use KL default
-        },
-      );
+  // Live GPS tracking via watchPosition — cleans up on unmount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus("denied");
+      return;
     }
-  });
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        setGpsStatus("live");
+      },
+      () => {
+        // Geolocation denied or unavailable — fall back to KL default
+        setGpsStatus("denied");
+        setUserLocation([3.139, 101.6869]);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
 
   const filteredCafes = useMemo(() => {
     if (!cafes) return [];
@@ -244,6 +279,37 @@ export default function MapView() {
               Loading cafes…
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ── GPS status indicator (top-left) ────────────────────────── */}
+      {gpsStatus === "locating" && (
+        <div
+          data-ocid="map.gps.loading_state"
+          className="absolute top-3 left-3 z-[500] flex items-center gap-2 rounded-full bg-white/95 dark:bg-card/95 backdrop-blur-sm border border-border px-3 py-2 shadow-lg"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+          </span>
+          <span className="text-xs font-semibold text-foreground/80">
+            Locating you…
+          </span>
+        </div>
+      )}
+
+      {gpsStatus === "live" && (
+        <div
+          data-ocid="map.gps.success_state"
+          className="absolute top-3 left-3 z-[500] flex items-center gap-2 rounded-full bg-white/95 dark:bg-card/95 backdrop-blur-sm border border-green-200 px-3 py-2 shadow-lg"
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+          </span>
+          <span className="text-xs font-semibold text-green-700 dark:text-green-400">
+            Live GPS
+          </span>
         </div>
       )}
 
@@ -387,6 +453,9 @@ export default function MapView() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* Auto-center on first GPS fix */}
+        <MapCenterController position={userLocation} />
 
         {/* User location blue dot */}
         {userLocation && (

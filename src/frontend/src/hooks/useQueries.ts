@@ -356,3 +356,158 @@ export function useGetDailyStats() {
     enabled: !!actor && !isFetching && !!identity && isAdmin,
   });
 }
+
+// ── Seed Demo Cafes ───────────────────────────────────────────────────────
+
+const DEMO_CAFES = [
+  {
+    name: "Buro Bangsar",
+    latitude: 3.1308,
+    longitude: 101.6724,
+    roastLevel: "Light",
+    availableFreeCups: BigInt(8),
+    coffees: [
+      {
+        id: "c1",
+        name: "Ethiopia Yirgacheffe",
+        origin: "Ethiopia",
+        roastLevel: "Light",
+        flavorProfile:
+          "Bright citrus, jasmine, and stone fruit with a tea-like body",
+      },
+      {
+        id: "c2",
+        name: "Kenya AA",
+        origin: "Kenya",
+        roastLevel: "Light",
+        flavorProfile: "Black currant, tomato, and a winey acidity",
+      },
+    ],
+  },
+  {
+    name: "VCR Cafe",
+    latitude: 3.1448,
+    longitude: 101.6875,
+    roastLevel: "Medium",
+    availableFreeCups: BigInt(5),
+    coffees: [
+      {
+        id: "c3",
+        name: "Guatemala Antigua",
+        origin: "Guatemala",
+        roastLevel: "Medium",
+        flavorProfile: "Brown sugar, dark chocolate, and mild spice",
+      },
+      {
+        id: "c4",
+        name: "Colombia Huila",
+        origin: "Colombia",
+        roastLevel: "Medium",
+        flavorProfile: "Caramel, red apple, and soft floral notes",
+      },
+    ],
+  },
+  {
+    name: "Artisan Roast KLCC",
+    latitude: 3.1583,
+    longitude: 101.7136,
+    roastLevel: "Medium",
+    availableFreeCups: BigInt(3),
+    coffees: [
+      {
+        id: "c5",
+        name: "Brazil Cerrado",
+        origin: "Brazil",
+        roastLevel: "Medium",
+        flavorProfile: "Nutty, dark chocolate, and a smooth buttery finish",
+      },
+      {
+        id: "c6",
+        name: "Sumatra Mandheling",
+        origin: "Indonesia",
+        roastLevel: "Dark",
+        flavorProfile: "Earthy cedar, dark chocolate, and low acidity",
+      },
+    ],
+  },
+  {
+    name: "The Brew Culture",
+    latitude: 3.1195,
+    longitude: 101.6568,
+    roastLevel: "Dark",
+    availableFreeCups: BigInt(10),
+    coffees: [
+      {
+        id: "c7",
+        name: "Java Old Brown",
+        origin: "Indonesia",
+        roastLevel: "Dark",
+        flavorProfile: "Smoky, bittersweet cocoa, and woody undertones",
+      },
+      {
+        id: "c8",
+        name: "Vietnam Robusta",
+        origin: "Vietnam",
+        roastLevel: "Dark",
+        flavorProfile: "Bold, strong, with earthy and rubbery notes",
+      },
+    ],
+  },
+  {
+    name: "Coffee Societe",
+    latitude: 3.1521,
+    longitude: 101.7028,
+    roastLevel: "Light",
+    availableFreeCups: BigInt(6),
+    coffees: [
+      {
+        id: "c9",
+        name: "Panama Geisha",
+        origin: "Panama",
+        roastLevel: "Light",
+        flavorProfile: "Bergamot, peach blossom, and extraordinary clarity",
+      },
+      {
+        id: "c10",
+        name: "Rwanda Bourbon",
+        origin: "Rwanda",
+        roastLevel: "Light",
+        flavorProfile: "Hibiscus, red berries, and a silky smooth body",
+      },
+    ],
+  },
+];
+
+export function useSeedDemoCafes() {
+  const { actor } = useActor();
+  const { identity } = useInternetIdentity();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Actor not available");
+      if (!identity) throw new Error("Must be logged in to seed demo cafes");
+
+      const ownerPrincipal = identity.getPrincipal();
+
+      for (const cafeData of DEMO_CAFES) {
+        const cafe = await actor.createCafeProfile(
+          ownerPrincipal,
+          cafeData.name,
+          cafeData.latitude,
+          cafeData.longitude,
+          cafeData.roastLevel,
+          cafeData.availableFreeCups,
+        );
+
+        for (const coffee of cafeData.coffees) {
+          await actor.addCoffeeToCafe(cafe.id, coffee);
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cafes"] });
+      queryClient.invalidateQueries({ queryKey: ["dailyStats"] });
+    },
+  });
+}
