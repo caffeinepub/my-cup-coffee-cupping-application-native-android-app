@@ -303,22 +303,20 @@ export default function LandingPage() {
 
           {/* Headline */}
           <h1
-            className="animate-fade-up-delay-1 font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight text-white mb-3 sm:mb-5"
+            className="animate-fade-up-delay-1 font-display text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight text-white mb-3 sm:mb-5 max-w-xs sm:max-w-2xl"
             style={{ textShadow: "0 4px 32px rgba(0,0,0,0.5)" }}
           >
-            My Free
+            Coffee Reviews
             <br />
-            <span className="text-chart-2 italic">Coffee Cup</span>
+            <span className="text-chart-2 italic">for Free Cups</span>
+            <br />
+            <span className="text-white/90">Justify You Are a</span>
+            <br />
+            <span className="text-chart-2">Real Coffee Lover</span>
           </h1>
 
-          {/* Subtitle */}
-          <p className="animate-fade-up-delay-2 max-w-xs sm:max-w-xl mx-auto text-base sm:text-xl text-white/75 leading-relaxed mb-6 sm:mb-8">
-            Exchange expert coffee tasting reviews for free cups at partner
-            cafes — while developing professional cupping skills that matter.
-          </p>
-
           {/* CTA */}
-          <div className="animate-fade-up-delay-3 flex flex-col sm:flex-row gap-3 justify-center items-center mb-6 sm:mb-8">
+          <div className="animate-fade-up-delay-3 flex flex-col sm:flex-row gap-3 justify-center items-center mb-5 sm:mb-7">
             <Button
               size="lg"
               onClick={handleLogin}
@@ -423,13 +421,6 @@ export default function LandingPage() {
           </div>
 
           {/* ── Paired card rows — same height per row via CSS grid ───── */}
-          {/*
-            Layout: feature[0] | step[0]
-                    feature[1] | step[1]
-                    feature[2] | step[2]
-            CSS grid auto-rows stretches both cards in a row to equal height.
-            Mobile: single column, all 6 cards stacked.
-          */}
           <div
             className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8"
             style={{ gridAutoRows: "1fr" }}
