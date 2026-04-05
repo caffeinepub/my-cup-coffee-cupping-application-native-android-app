@@ -391,98 +391,97 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Combined Features + How It Works (2-column) ──────────────────── */}
+      {/* ── Combined Features + How It Works (equal-height grid) ─────────── */}
       <section className="bg-background py-20 sm:py-28 relative overflow-hidden">
         {/* Decorative rings */}
         <div className="absolute -right-32 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full border border-border/50 pointer-events-none" />
         <div className="absolute -right-48 top-1/2 -translate-y-1/2 w-[32rem] h-[32rem] rounded-full border border-border/30 pointer-events-none" />
 
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start">
-            {/* ── Left column: What You Get ───────────────────────────── */}
+          {/* ── Column headers side by side ───────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 mb-10">
+            {/* Left header */}
             <div>
-              <div className="mb-10">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
-                  What You Get
-                </p>
-                <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                  Discover. Review.{" "}
-                  <span className="text-primary italic">Earn.</span>
-                </h2>
-              </div>
-
-              <div className="flex flex-col gap-6">
-                {features.map((feat, i) => {
-                  const ocids = [
-                    "landing.feature.item.1",
-                    "landing.feature.item.2",
-                    "landing.feature.item.3",
-                  ] as const;
-                  return (
-                    <div
-                      key={feat.title}
-                      data-ocid={ocids[i]}
-                      className="group relative rounded-2xl border border-border bg-card p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5`}
-                      >
-                        <feat.icon className={`h-6 w-6 ${feat.color}`} />
-                      </div>
-                      <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                        {feat.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {feat.description}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                What You Get
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
+                Discover. Review.{" "}
+                <span className="text-primary italic">Earn.</span>
+              </h2>
             </div>
 
-            {/* ── Right column: Three Simple Steps ───────────────────── */}
+            {/* Right header */}
             <div>
-              <div className="mb-10">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
-                  Three Simple Steps
-                </p>
-                <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                  How It <span className="text-primary italic">Works</span>
-                </h2>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                Three Simple Steps
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
+                How It <span className="text-primary italic">Works</span>
+              </h2>
+            </div>
+          </div>
 
-              <div className="space-y-5">
-                {steps.map((step, idx) => (
+          {/* ── Paired card rows — same height per row via CSS grid ───── */}
+          {/*
+            Layout: feature[0] | step[0]
+                    feature[1] | step[1]
+                    feature[2] | step[2]
+            CSS grid auto-rows stretches both cards in a row to equal height.
+            Mobile: single column, all 6 cards stacked.
+          */}
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8"
+            style={{ gridAutoRows: "1fr" }}
+          >
+            {features.map((feat, i) => {
+              const step = steps[i];
+              const featureOcids = [
+                "landing.feature.item.1",
+                "landing.feature.item.2",
+                "landing.feature.item.3",
+              ] as const;
+
+              return (
+                <>
+                  {/* Feature card — left column */}
                   <div
-                    key={step.num}
-                    className="group flex items-start gap-5 rounded-2xl border border-border bg-card p-6 sm:p-8 transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                    key={`feat-${feat.title}`}
+                    data-ocid={featureOcids[i]}
+                    className="group relative rounded-2xl border border-border bg-card p-7 h-full flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
                   >
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                      <span className="font-display text-sm font-black text-primary-foreground">
-                        {step.num}
-                      </span>
+                    <div
+                      className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
+                    >
+                      <feat.icon className={`h-6 w-6 ${feat.color}`} />
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-display text-lg font-bold text-foreground">
-                          {step.title}
-                        </h3>
-                        {idx < 2 && (
-                          <ArrowRight className="hidden sm:block h-4 w-4 text-muted-foreground/50 mt-0.5" />
-                        )}
-                        {idx === 2 && (
-                          <CheckCircle className="h-4 w-4 text-primary mt-0.5" />
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {step.body}
-                      </p>
-                    </div>
+                    <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                      {feat.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                      {feat.description}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  {/* Step card — right column */}
+                  <div
+                    key={`step-${step.num}`}
+                    className="group rounded-2xl border border-border bg-card p-6 sm:p-8 h-full flex flex-col transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                  >
+                    {/* Step number — large decorative label above title */}
+                    <p className="font-display text-4xl font-black text-primary/40 leading-none mb-2 tracking-tight shrink-0">
+                      {step.num}
+                    </p>
+                    <h3 className="font-display text-lg font-bold text-foreground mb-2">
+                      {step.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                      {step.body}
+                    </p>
+                  </div>
+                </>
+              );
+            })}
           </div>
         </div>
       </section>

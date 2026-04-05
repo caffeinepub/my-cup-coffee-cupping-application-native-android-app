@@ -1,11 +1,27 @@
-# Specification
+# My Cup
 
-## Summary
-**Goal:** Fix admin/founder recognition so the authenticated deployer can reliably access the Admin Dashboard.
+## Current State
+The app is a gamified coffee discovery and cupping platform. It has:
+- Landing page (LandingPage.tsx) with hero section, interactive stat buttons, features/steps two-column layout
+- Android-native-style UI with bottom navigation bar, compact header, phone-width layout
+- Hero uses user-uploaded espresso crema photo as background
+- Stat buttons (Review Submitted, Partner Cafes, Skill Level) in hero — show icon/number by default, tap reveals title, tap again reveals explanation
+- Pages 2+3 merged into a single two-column layout: left = feature cards (Discover Cafe, Submit Reviews, Earn Free Coffee), right = numbered steps (01/02/03)
+- Admin dashboard visible only to founder/admin account (role-based via authorization component)
+- Daily stats chart and table in admin dashboard
+- CuppingForm, MapView, QRCodeScanner, UserProfile, CafeDashboard components
+- Authorization, blob-storage, camera, qr-code components selected
 
-**Planned changes:**
-- In `backend/main.mo`, store the deployer's principal in stable storage at canister initialization and expose an `isAdmin() : async Bool` query that returns `true` only for that principal, surviving canister upgrades.
-- In `frontend/src/hooks/useQueries.ts`, fix the `useIsAdmin` hook to correctly call the backend `isAdmin()` query, re-fetch when the actor/identity changes, and default to `false` on error.
-- In `frontend/src/pages/HomePage.tsx`, conditionally render the Admin Dashboard tab only when `useIsAdmin` returns `true`, and add a visual indicator (badge or label) on the tab to confirm admin access.
+## Requested Changes (Diff)
 
-**User-visible outcome:** After logging in with the founder/deployer identity, the Admin Dashboard tab automatically appears with a visual admin indicator, while non-admin users see no Admin tab.
+### Add
+- Nothing new
+
+### Modify
+- Rebuild/redeploy the existing app as-is (draft expired, needs fresh deploy)
+
+### Remove
+- Nothing
+
+## Implementation Plan
+1. Deploy the existing codebase as-is to create a new live draft
