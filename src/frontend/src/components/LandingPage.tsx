@@ -44,7 +44,7 @@ const features = [
     icon: QrCode,
     title: "Earn Free Coffee",
     description:
-      "Once your review is accepted and your accuracy score is verified, redeem a QR code for a complimentary cup at any partner cafe.",
+      "Once your review is accepted and your accuracy score is verified, show your unique QR code at the counter to redeem a complimentary cup. Your score improves with each review, unlocking premium cafes and skill badges.",
     color: "text-chart-4",
     bg: "bg-chart-4/10",
   },
@@ -65,7 +65,7 @@ const steps = [
   {
     num: "03",
     title: "Redeem Your Free Cup",
-    body: "Show your unique QR code at the counter. Your accuracy score improves with each review, unlocking premium cafes and skill badges.",
+    body: "Once your review is accepted and your accuracy score is verified, show your unique QR code at the counter. Your score improves with each review, unlocking premium cafes and skill badges.",
   },
 ];
 
