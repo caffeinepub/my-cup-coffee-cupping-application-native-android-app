@@ -199,3 +199,18 @@
   pointer-events: none;
   animation: grain-drift 8s steps(1) infinite;
 }
+
+/* ── Leaflet map tiles (ensure proper stacking context) ─────────────────── */
+.leaflet-container {
+  z-index: 0;
+}
+
+.leaflet-pane {
+  z-index: 0;
+}
+
+/* Keep leaflet controls above the map but below modals/panels */
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 400;
+}

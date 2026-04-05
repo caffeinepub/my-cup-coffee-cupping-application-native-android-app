@@ -31,6 +31,7 @@ const features = [
       "Browse the live map to find participating specialty coffee shops near you. Filter by proximity, available coffee origins, and roast style.",
     color: "text-chart-2",
     bg: "bg-chart-2/10",
+    cta: "→ Explore Map",
   },
   {
     icon: ClipboardList,
@@ -39,6 +40,7 @@ const features = [
       "Enjoy your coffee mindfully, then score fragrance, aroma, flavor, body, acidity, aftertaste, sweetness, and balance using the industry-standard SCA cupping form.",
     color: "text-primary",
     bg: "bg-primary/10",
+    cta: null,
   },
   {
     icon: QrCode,
@@ -47,25 +49,7 @@ const features = [
       "Once your review is accepted and your accuracy score is verified, show your unique QR code at the counter to redeem a complimentary cup. Your score improves with each review, unlocking premium cafes and skill badges.",
     color: "text-chart-4",
     bg: "bg-chart-4/10",
-  },
-];
-
-/* ─── Steps ──────────────────────────────────────────────────────────────── */
-const steps = [
-  {
-    num: "01",
-    title: "Find Participating Cafe",
-    body: "Open the map, find a cafe near you, and filter by coffee origin or roast style to pick the perfect cupping session.",
-  },
-  {
-    num: "02",
-    title: "Taste & Submit",
-    body: "Fill in the SCA cupping form — scoring aroma, body, acidity, aftertaste, sweetness, and balance — to earn your free cup.",
-  },
-  {
-    num: "03",
-    title: "Redeem Your Free Cup",
-    body: "Once your review is accepted and your accuracy score is verified, show your unique QR code at the counter. Your score improves with each review, unlocking premium cafes and skill badges.",
+    cta: null,
   },
 ];
 
@@ -395,76 +379,74 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Combined Features + How It Works (equal-height grid) ─────────── */}
+      {/* ── Features ─────────────────────────────────────────────────────── */}
       <section className="bg-background py-20 sm:py-28 relative overflow-hidden">
         {/* Decorative rings */}
         <div className="absolute -right-32 top-1/2 -translate-y-1/2 w-96 h-96 rounded-full border border-border/50 pointer-events-none" />
         <div className="absolute -right-48 top-1/2 -translate-y-1/2 w-[32rem] h-[32rem] rounded-full border border-border/30 pointer-events-none" />
 
         <div className="container mx-auto px-4">
-          {/* ── Column headers side by side ───────────────────────────── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 mb-10">
-            {/* Left header */}
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
-                What You Get
-              </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                Discover. Review.{" "}
-                <span className="text-primary italic">Earn.</span>
-              </h2>
-            </div>
-
-            {/* Right header */}
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
-                Three Simple Steps
-              </p>
-              <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
-                How It <span className="text-primary italic">Works</span>
-              </h2>
-            </div>
+          {/* Section header */}
+          <div className="mb-10">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-3">
+              What You Get
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl font-black text-foreground leading-tight">
+              Discover. Review.{" "}
+              <span className="text-primary italic">Earn.</span>
+            </h2>
           </div>
 
-          {/* ── Paired card rows — feat0, step0, feat1, step1, feat2, step2 ── */}
-          {/* With grid-cols-2, this flat interleaved order fills left→right, row by row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-            {features.map((feat, i) => {
-              const step = steps[i];
-              return [
-                /* Feature card — left column */
-                <div
-                  key={`feat-${feat.title}`}
-                  data-ocid={featureOcids[i]}
-                  className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
+          {/* Feature cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {/* Discover Cafes — interactive button card */}
+            {(() => {
+              const DiscoverIcon = features[0].icon;
+              return (
+                <button
+                  type="button"
+                  data-ocid={featureOcids[0]}
+                  onClick={handleLogin}
+                  className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-chart-2/40 hover:shadow-chart-2/10 cursor-pointer text-left w-full"
                 >
                   <div
-                    className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
+                    className={`w-12 h-12 rounded-xl ${features[0].bg} flex items-center justify-center mb-5 shrink-0`}
                   >
-                    <feat.icon className={`h-6 w-6 ${feat.color}`} />
+                    <DiscoverIcon className={`h-6 w-6 ${features[0].color}`} />
                   </div>
                   <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                    {feat.title}
+                    {features[0].title}
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                    {feat.description}
+                    {features[0].description}
                   </p>
-                </div>,
+                  <div className="mt-4 flex items-center gap-1 text-xs font-bold text-chart-2 group-hover:gap-2 transition-all">
+                    <span>{features[0].cta}</span>
+                  </div>
+                </button>
+              );
+            })()}
 
-                /* Step card — right column */
+            {/* Submit Reviews and Earn Free Coffee — static cards */}
+            {features.slice(1).map((feat, j) => (
+              <div
+                key={feat.title}
+                data-ocid={featureOcids[j + 1]}
+                className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
+              >
                 <div
-                  key={`step-${step.num}`}
-                  className="group rounded-2xl border border-border bg-card p-6 sm:p-8 flex flex-col transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                  className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
                 >
-                  <h3 className="font-display text-lg font-bold text-foreground mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                    {step.body}
-                  </p>
-                </div>,
-              ];
-            })}
+                  <feat.icon className={`h-6 w-6 ${feat.color}`} />
+                </div>
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                  {feat.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                  {feat.description}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
