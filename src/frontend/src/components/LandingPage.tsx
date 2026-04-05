@@ -24,6 +24,7 @@ import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import CuppingFormDrawer from "./CuppingFormDrawer";
 import EarnCoffeeDrawer from "./EarnCoffeeDrawer";
+import RegistrationPreviewPage from "./RegistrationPreviewPage";
 
 /* ─── Feature card data ──────────────────────────────────────────────────── */
 const features = [
@@ -210,18 +211,15 @@ export default function LandingPage({
   onOpenMap,
   onOpenCupping,
 }: LandingPageProps) {
-  const { login, loginStatus } = useInternetIdentity();
+  const { loginStatus } = useInternetIdentity();
   const isLoggingIn = loginStatus === "logging-in";
   const [openModal, setOpenModal] = useState<ModalType>(null);
   const [cuppingDrawerOpen, setCuppingDrawerOpen] = useState(false);
   const [earnDrawerOpen, setEarnDrawerOpen] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
 
   const handleLogin = () => {
-    try {
-      login();
-    } catch {
-      /* handled by hook */
-    }
+    setShowRegistration(true);
   };
 
   const stats: {
@@ -821,6 +819,11 @@ export default function LandingPage({
         open={earnDrawerOpen}
         onClose={() => setEarnDrawerOpen(false)}
       />
+
+      {/* Registration Preview — shown when new user taps Login / Start for Free */}
+      {showRegistration && (
+        <RegistrationPreviewPage onBack={() => setShowRegistration(false)} />
+      )}
     </div>
   );
 }
