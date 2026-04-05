@@ -1,4 +1,3 @@
-import "leaflet/dist/leaflet.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +17,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import L from "leaflet";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import {
   CheckCircle2,
   Coffee,
@@ -32,13 +27,8 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { CafeProfile, Coffee as CoffeeType, QRCodeData } from "../backend";
 import { useGenerateQRCode, useGetFilteredCafes } from "../hooks/useQueries";
-
-// Fix leaflet default icon path issue with bundlers
-(L.Icon.Default.prototype as any)._getIconUrl = undefined;
-L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -46,25 +36,6 @@ function slotColor(slots: number): string {
   if (slots >= 5) return "#22c55e";
   if (slots > 0) return "#f59e0b";
   return "#ef4444";
-}
-
-function cafeIcon(slots: number) {
-  const color = slotColor(slots);
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
-    iconAnchor: [10, 10],
-    iconSize: [20, 20],
-  });
-}
-
-function userIcon() {
-  return L.divIcon({
-    className: "",
-    html: `<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 10px rgba(59,130,246,0.6)"><div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(59,130,246,0.2);animation:pulse 2s infinite"></div></div>`,
-    iconAnchor: [9, 9],
-    iconSize: [18, 18],
-  });
 }
 
 function haversineKm(
@@ -84,28 +55,7 @@ function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ── Map Center Controller ────────────────────────────────────────────────
-// Flies to the user's position once when GPS first resolves.
-
-function MapCenterController({
-  position,
-}: {
-  position: [number, number] | null;
-}) {
-  const map = useMap();
-  const hasCentered = useRef(false);
-
-  useEffect(() => {
-    if (position && !hasCentered.current) {
-      hasCentered.current = true;
-      map.flyTo(position, 14, { animate: true, duration: 1.5 });
-    }
-  }, [position, map]);
-
-  return null;
-}
-
-// ── Slot Legend ────────────────────────────────────────────────────────────
+// ── Slot Legend ─────────────────────────────────────────────────────────────
 
 function SlotLegend() {
   return (
@@ -157,12 +107,57 @@ function StatCard({
   );
 }
 
+// ── Leaflet loader ────────────────────────────────────────────────────────
+// Load leaflet from CDN at runtime to avoid build-time dependency
+
+let leafletLoaded = false;
+let leafletLoadPromise: Promise<void> | null = null;
+
+function loadLeaflet(): Promise<void> {
+  if (leafletLoaded) return Promise.resolve();
+  if (leafletLoadPromise) return leafletLoadPromise;
+
+  leafletLoadPromise = new Promise((resolve, reject) => {
+    // Load CSS
+    if (!document.querySelector('link[href*="leaflet"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Load JS
+    if (!(window as any).L) {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.onload = () => {
+        leafletLoaded = true;
+        resolve();
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    } else {
+      leafletLoaded = true;
+      resolve();
+    }
+  });
+
+  return leafletLoadPromise;
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function MapView() {
   const { data: cafes, isLoading } = useGetFilteredCafes();
   const generateQRCode = useGenerateQRCode();
 
+  const mapRef = useRef<any>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
+  const cafeMarkersRef = useRef<any[]>([]);
+  const hasCenteredRef = useRef(false);
+
+  const [leafletReady, setLeafletReady] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null,
   );
@@ -179,31 +174,7 @@ export default function MapView() {
     null,
   );
 
-  // Live GPS tracking via watchPosition — cleans up on unmount
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setGpsStatus("denied");
-      return;
-    }
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
-        setGpsStatus("live");
-      },
-      () => {
-        // Geolocation denied or unavailable — fall back to Bandung default
-        setGpsStatus("denied");
-        setUserLocation([-6.9147, 107.6098]);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
-    );
-
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-    };
-  }, []);
-
+  // filteredCafes declared early so marker effect can use it
   const filteredCafes = useMemo(() => {
     if (!cafes) return [];
     return cafes.filter((cafe) => {
@@ -226,6 +197,189 @@ export default function MapView() {
       return true;
     });
   }, [cafes, slotsOnly, roastFilter, distanceKm, userLocation]);
+
+  // Load leaflet from CDN
+  useEffect(() => {
+    loadLeaflet()
+      .then(() => setLeafletReady(true))
+      .catch(() => {});
+  }, []);
+
+  // Initialize map once leaflet is ready
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || mapInstanceRef.current) return;
+
+    const L = (window as any).L;
+    const mapCenter: [number, number] = [-6.9147, 107.6098];
+
+    // Fix default icon
+    L.Icon.Default.prototype._getIconUrl = undefined;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl:
+        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+      shadowUrl:
+        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    });
+
+    const map = L.map(mapRef.current, {
+      center: mapCenter,
+      zoom: 13,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+  }, [leafletReady]);
+
+  // Update user location marker
+  useEffect(() => {
+    if (!leafletReady || !mapInstanceRef.current) return;
+    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+
+    if (userLocation) {
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 10px rgba(59,130,246,0.6)"></div>`,
+        iconAnchor: [9, 9],
+        iconSize: [18, 18],
+      });
+      userMarkerRef.current = L.marker(userLocation, { icon })
+        .addTo(map)
+        .bindPopup(
+          "<div style='text-align:center;padding:4px'>\uD83D\uDCCD You are here</div>",
+        );
+
+      if (!hasCenteredRef.current) {
+        hasCenteredRef.current = true;
+        map.flyTo(userLocation, 14, { animate: true, duration: 1.5 });
+      }
+    }
+  }, [leafletReady, userLocation]);
+
+  // Update cafe markers
+  useEffect(() => {
+    if (!leafletReady || !mapInstanceRef.current) return;
+    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+
+    // Remove old markers
+    for (const m of cafeMarkersRef.current) {
+      m.remove();
+    }
+    cafeMarkersRef.current = [];
+
+    for (const cafe of filteredCafes) {
+      const slots = Number(cafe.availableFreeCups);
+      let icon: any;
+
+      if (cafe.name === "Kopi Selasar") {
+        const html = `
+          <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.35))">
+            <div style="background:#7c4c2a;color:white;border-radius:8px;padding:5px 8px;text-align:center;font-family:sans-serif;min-width:90px;border:2px solid #f59e0b;position:relative">
+              <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">\u2B50 FEATURED</div>
+              <div style="font-size:13px;margin-top:4px">\u2615</div>
+              <div style="font-size:9px;font-weight:700;margin-top:1px;white-space:nowrap">Kopi Selasar</div>
+            </div>
+            <div style="width:3px;height:14px;background:#7c4c2a"></div>
+            <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid #7c4c2a"></div>
+          </div>
+        `;
+        icon = L.divIcon({
+          className: "",
+          html,
+          iconAnchor: [48, 70],
+          iconSize: [96, 70],
+        });
+      } else {
+        const color = slotColor(slots);
+        icon = L.divIcon({
+          className: "",
+          html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
+          iconAnchor: [10, 10],
+          iconSize: [20, 20],
+        });
+      }
+
+      const featuredBadge =
+        cafe.name === "Kopi Selasar"
+          ? `<span style="display:inline-block;background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:3px">\u2B50 Featured</span>`
+          : "";
+
+      const popup = L.popup().setContent(`
+        <div style="min-width:160px;padding:4px 0;font-family:sans-serif">
+          <div>
+            <p style="font-weight:700;font-size:14px;margin:0 0 2px">${cafe.name}</p>
+            ${featuredBadge}
+            <p style="font-size:12px;color:#888;margin:2px 0">${cafe.roastLevel} Roast</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin:6px 0">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${slotColor(slots)}"></span>
+            <span style="font-size:12px">${slots} slot${slots !== 1 ? "s" : ""} available</span>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:6px">\u2B50 ${cafe.averageScores.overall.toFixed(1)} avg score</div>
+        </div>
+      `);
+
+      const marker = L.marker(
+        [cafe.location.latitude, cafe.location.longitude],
+        { icon },
+      )
+        .addTo(map)
+        .bindPopup(popup);
+
+      marker.on("click", () => {
+        setSelectedCafe(cafe);
+        setQrResult(null);
+      });
+
+      cafeMarkersRef.current.push(marker);
+    }
+  }, [leafletReady, filteredCafes]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Live GPS tracking via watchPosition
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus("denied");
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        setGpsStatus("live");
+      },
+      () => {
+        setGpsStatus("denied");
+        setUserLocation([-6.9147, 107.6098]);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
 
   const handleReserve = (coffee: CoffeeType) => {
     if (!selectedCafe) return;
@@ -258,9 +412,6 @@ export default function MapView() {
       ).toLocaleString()
     : null;
 
-  // Default map center: Bandung, West Java
-  const mapCenter: [number, number] = userLocation ?? [-6.9147, 107.6098];
-
   const handleResetFilters = () => {
     setDistanceKm(50);
     setRoastFilter("All");
@@ -274,7 +425,7 @@ export default function MapView() {
       data-ocid="map.section"
     >
       {/* ── Loading overlay ─────────────────────────────────────────── */}
-      {isLoading && (
+      {(isLoading || !leafletReady) && (
         <div
           className="absolute inset-0 z-[600] flex items-center justify-center bg-background/70 backdrop-blur-sm"
           data-ocid="map.loading_state"
@@ -282,7 +433,7 @@ export default function MapView() {
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground font-medium">
-              Loading cafes…
+              {!leafletReady ? "Loading map\u2026" : "Loading cafes\u2026"}
             </p>
           </div>
         </div>
@@ -299,7 +450,7 @@ export default function MapView() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
           </span>
           <span className="text-xs font-semibold text-foreground/80">
-            Locating you…
+            Locating you\u2026
           </span>
         </div>
       )}
@@ -431,85 +582,12 @@ export default function MapView() {
       {/* ── Slot legend ──────────────────────────────────────────────── */}
       <SlotLegend />
 
-      {/* ── Leaflet Map ──────────────────────────────────────────────── */}
-      <MapContainer
-        center={mapCenter}
-        zoom={13}
-        style={{ height: "100%", width: "100%", zIndex: 0 }}
-        scrollWheelZoom
-        className="rounded-xl overflow-hidden"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
-        {/* Auto-center on first GPS fix */}
-        <MapCenterController position={userLocation} />
-
-        {/* User location blue dot */}
-        {userLocation && (
-          <Marker position={userLocation} icon={userIcon()}>
-            <Popup>
-              <div className="text-sm font-semibold text-center py-1">
-                📍 You are here
-              </div>
-            </Popup>
-          </Marker>
-        )}
-
-        {/* Cafe markers */}
-        {filteredCafes.map((cafe) => (
-          <Marker
-            key={cafe.id}
-            position={[cafe.location.latitude, cafe.location.longitude]}
-            icon={cafeIcon(Number(cafe.availableFreeCups))}
-            eventHandlers={{
-              click: () => {
-                setSelectedCafe(cafe);
-                setQrResult(null);
-              },
-            }}
-          >
-            <Popup>
-              <div className="min-w-[160px] py-1 space-y-2">
-                <div>
-                  <p className="font-bold text-sm leading-tight">{cafe.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {cafe.roastLevel} Roast
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block w-2.5 h-2.5 rounded-full"
-                    style={{
-                      background: slotColor(Number(cafe.availableFreeCups)),
-                    }}
-                  />
-                  <span className="text-xs">
-                    {Number(cafe.availableFreeCups)} slot
-                    {Number(cafe.availableFreeCups) !== 1 ? "s" : ""} available
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Star className="h-3 w-3 text-yellow-500" />
-                  <span>{cafe.averageScores.overall.toFixed(1)} avg score</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCafe(cafe);
-                    setQrResult(null);
-                  }}
-                  className="w-full mt-1 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded-lg px-3 py-1.5 transition-colors"
-                >
-                  View Details →
-                </button>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+      {/* ── Map container ────────────────────────────────────────────── */}
+      <div
+        ref={mapRef}
+        className="w-full h-full rounded-xl overflow-hidden"
+        style={{ zIndex: 0 }}
+      />
 
       {/* ── Cafe Detail Bottom Drawer ────────────────────────────────── */}
       <Drawer open={!!selectedCafe} onOpenChange={handleDrawerClose}>
@@ -525,6 +603,23 @@ export default function MapView() {
                     <DrawerTitle className="font-display text-xl font-black text-foreground leading-tight">
                       {selectedCafe.name}
                     </DrawerTitle>
+                    {selectedCafe.name === "Kopi Selasar" && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          background: "#f59e0b",
+                          color: "#fff",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: "5px",
+                          marginTop: "4px",
+                          letterSpacing: "0.03em",
+                        }}
+                      >
+                        \u2B50 Featured Cafe
+                      </span>
+                    )}
                     <div className="flex items-center gap-1 mt-1">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
@@ -609,7 +704,7 @@ export default function MapView() {
                                 selectedCafe.location.latitude,
                                 selectedCafe.location.longitude,
                               ).toFixed(1)} km`
-                            : "—"
+                            : "\u2014"
                         }
                       />
                       <StatCard
@@ -649,7 +744,7 @@ export default function MapView() {
                                   </p>
                                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                                     <span className="text-xs text-muted-foreground">
-                                      🌍 {coffee.origin}
+                                      \uD83C\uDF0D {coffee.origin}
                                     </span>
                                     <Badge
                                       variant="outline"
@@ -679,7 +774,7 @@ export default function MapView() {
                                   {reservingCoffeeId === coffee.id ? (
                                     <span className="flex items-center gap-1">
                                       <Loader2 className="h-3 w-3 animate-spin" />
-                                      …
+                                      \u2026
                                     </span>
                                   ) : Number(selectedCafe.availableFreeCups) ===
                                     0 ? (

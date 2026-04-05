@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Coffee,
   Download,
+  LogIn,
   Map as MapIcon,
   QrCode,
   Star,
@@ -21,6 +22,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import CuppingFormDrawer from "./CuppingFormDrawer";
+import EarnCoffeeDrawer from "./EarnCoffeeDrawer";
 
 /* ─── Feature card data ──────────────────────────────────────────────────── */
 const features = [
@@ -40,7 +43,7 @@ const features = [
       "Enjoy your coffee mindfully, then score fragrance, aroma, flavor, body, acidity, aftertaste, sweetness, and balance using the industry-standard SCA cupping form.",
     color: "text-primary",
     bg: "bg-primary/10",
-    cta: null,
+    cta: "→ Score Coffee",
   },
   {
     icon: QrCode,
@@ -49,7 +52,7 @@ const features = [
       "Once your review is accepted and your accuracy score is verified, show your unique QR code at the counter to redeem a complimentary cup. Your score improves with each review, unlocking premium cafes and skill badges.",
     color: "text-chart-4",
     bg: "bg-chart-4/10",
-    cta: null,
+    cta: "→ Redeem QR",
   },
 ];
 
@@ -200,12 +203,18 @@ type ModalType = "reviews" | "cafes" | "levels" | null;
 /* ─── Component ──────────────────────────────────────────────────────────── */
 interface LandingPageProps {
   onOpenMap?: () => void;
+  onOpenCupping?: () => void;
 }
 
-export default function LandingPage({ onOpenMap }: LandingPageProps) {
+export default function LandingPage({
+  onOpenMap,
+  onOpenCupping,
+}: LandingPageProps) {
   const { login, loginStatus } = useInternetIdentity();
   const isLoggingIn = loginStatus === "logging-in";
   const [openModal, setOpenModal] = useState<ModalType>(null);
+  const [cuppingDrawerOpen, setCuppingDrawerOpen] = useState(false);
+  const [earnDrawerOpen, setEarnDrawerOpen] = useState(false);
 
   const handleLogin = () => {
     try {
@@ -310,7 +319,8 @@ export default function LandingPage({ onOpenMap }: LandingPageProps) {
           </h1>
 
           {/* CTA */}
-          <div className="animate-fade-up-delay-3 flex flex-col sm:flex-row gap-3 justify-center items-center mb-5 sm:mb-7">
+          <div className="animate-fade-up-delay-3 flex flex-row gap-3 justify-center items-center mb-5 sm:mb-7 flex-wrap">
+            {/* Primary: Start for Free */}
             <Button
               size="lg"
               onClick={handleLogin}
@@ -330,9 +340,28 @@ export default function LandingPage({ onOpenMap }: LandingPageProps) {
                 </span>
               )}
             </Button>
-            <span className="text-white/40 text-xs">
-              No credit card · Free forever
-            </span>
+
+            {/* Secondary: LOGIN */}
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleLogin}
+              disabled={isLoggingIn}
+              data-ocid="landing.login_thumb_button"
+              className="h-12 sm:h-14 px-7 text-base font-bold rounded-full border-2 border-white/50 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:border-white/80 hover:text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl hover:shadow-white/10"
+            >
+              {isLoggingIn ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  Connecting…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </span>
+              )}
+            </Button>
           </div>
 
           {/* ── Stats buttons — reveal label on hover ───────────────────── */}
@@ -431,26 +460,64 @@ export default function LandingPage({ onOpenMap }: LandingPageProps) {
               );
             })()}
 
-            {/* Submit Reviews and Earn Free Coffee — static cards */}
-            {features.slice(1).map((feat, j) => (
-              <div
-                key={feat.title}
-                data-ocid={featureOcids[j + 1]}
-                className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20"
-              >
-                <div
-                  className={`w-12 h-12 rounded-xl ${feat.bg} flex items-center justify-center mb-5 shrink-0`}
+            {/* Submit Reviews — interactive button card */}
+            {(() => {
+              const ReviewIcon = features[1].icon;
+              return (
+                <button
+                  type="button"
+                  data-ocid={featureOcids[1]}
+                  onClick={() => {
+                    setCuppingDrawerOpen(true);
+                    if (onOpenCupping) onOpenCupping();
+                  }}
+                  className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/40 hover:shadow-primary/10 cursor-pointer text-left w-full"
                 >
-                  <feat.icon className={`h-6 w-6 ${feat.color}`} />
-                </div>
-                <h3 className="font-display text-xl font-bold text-foreground mb-2">
-                  {feat.title}
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-                  {feat.description}
-                </p>
-              </div>
-            ))}
+                  <div
+                    className={`w-12 h-12 rounded-xl ${features[1].bg} flex items-center justify-center mb-5 shrink-0`}
+                  >
+                    <ReviewIcon className={`h-6 w-6 ${features[1].color}`} />
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                    {features[1].title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {features[1].description}
+                  </p>
+                  <div className="mt-4 flex items-center gap-1 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+                    <span>{features[1].cta}</span>
+                  </div>
+                </button>
+              );
+            })()}
+
+            {/* Earn Free Coffee — interactive button card (NEW) */}
+            {(() => {
+              const EarnIcon = features[2].icon;
+              return (
+                <button
+                  type="button"
+                  data-ocid={featureOcids[2]}
+                  onClick={() => setEarnDrawerOpen(true)}
+                  className="group relative rounded-2xl border border-border bg-card p-7 flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-chart-4/40 hover:shadow-chart-4/10 cursor-pointer text-left w-full"
+                >
+                  <div
+                    className={`w-12 h-12 rounded-xl ${features[2].bg} flex items-center justify-center mb-5 shrink-0`}
+                  >
+                    <EarnIcon className={`h-6 w-6 ${features[2].color}`} />
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-2">
+                    {features[2].title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1">
+                    {features[2].description}
+                  </p>
+                  <div className="mt-4 flex items-center gap-1 text-xs font-bold text-chart-4 group-hover:gap-2 transition-all">
+                    <span>{features[2].cta}</span>
+                  </div>
+                </button>
+              );
+            })()}
           </div>
         </div>
       </section>
@@ -742,6 +809,18 @@ export default function LandingPage({ onOpenMap }: LandingPageProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cupping Form Drawer — for guest / unauthenticated preview */}
+      <CuppingFormDrawer
+        open={cuppingDrawerOpen}
+        onClose={() => setCuppingDrawerOpen(false)}
+      />
+
+      {/* Earn Free Coffee Drawer — sample QR redemption flow */}
+      <EarnCoffeeDrawer
+        open={earnDrawerOpen}
+        onClose={() => setEarnDrawerOpen(false)}
+      />
     </div>
   );
 }
