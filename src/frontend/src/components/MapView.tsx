@@ -192,7 +192,7 @@ export default function MapView() {
         setGpsStatus("live");
       },
       () => {
-        // Geolocation denied or unavailable — fall back to KL default
+        // Geolocation denied or unavailable — fall back to Bandung default
         setGpsStatus("denied");
         setUserLocation([-6.9147, 107.6098]);
       },
@@ -260,6 +260,12 @@ export default function MapView() {
 
   // Default map center: Bandung, West Java
   const mapCenter: [number, number] = userLocation ?? [-6.9147, 107.6098];
+
+  const handleResetFilters = () => {
+    setDistanceKm(50);
+    setRoastFilter("All");
+    setSlotsOnly(false);
+  };
 
   return (
     <div
@@ -408,38 +414,22 @@ export default function MapView() {
             {filteredCafes.length} cafe{filteredCafes.length !== 1 ? "s" : ""}{" "}
             showing
           </div>
-        </div>
-      )}
 
-      {/* ── Slot legend ──────────────────────────────────────────────── */}
-      <SlotLegend />
-
-      {/* ── Empty state ──────────────────────────────────────────────── */}
-      {!isLoading && filteredCafes.length === 0 && (
-        <div
-          data-ocid="map.empty_state"
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[500] flex flex-col items-center gap-2 bg-white/95 dark:bg-card/95 backdrop-blur-sm rounded-2xl shadow-xl border border-border px-6 py-5 text-center"
-        >
-          <Coffee className="h-10 w-10 text-muted-foreground" />
-          <p className="font-semibold text-foreground text-sm">
-            No cafes match your filters
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Try adjusting the distance or removing filters.
-          </p>
+          {/* Reset Filters button */}
           <Button
+            data-ocid="map.filters.button"
             size="sm"
             variant="outline"
-            onClick={() => {
-              setDistanceKm(50);
-              setRoastFilter("All");
-              setSlotsOnly(false);
-            }}
+            className="w-full text-xs"
+            onClick={handleResetFilters}
           >
             Reset Filters
           </Button>
         </div>
       )}
+
+      {/* ── Slot legend ──────────────────────────────────────────────── */}
+      <SlotLegend />
 
       {/* ── Leaflet Map ──────────────────────────────────────────────── */}
       <MapContainer
