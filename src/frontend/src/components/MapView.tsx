@@ -212,15 +212,7 @@ export default function MapView() {
     const L = (window as any).L;
     const mapCenter: [number, number] = [-6.9147, 107.6098];
 
-    // Fix default icon
-    L.Icon.Default.prototype._getIconUrl = undefined;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
+    // No default icon fix needed — we use L.divIcon for all markers
 
     const map = L.map(mapRef.current, {
       center: mapCenter,
@@ -250,9 +242,10 @@ export default function MapView() {
     if (userLocation) {
       const icon = L.divIcon({
         className: "",
-        html: `<div style="width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 10px rgba(59,130,246,0.6)"></div>`,
+        html: `<div style="position:relative;width:18px;height:18px;"><div style="position:absolute;top:0;left:0;width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 10px rgba(59,130,246,0.6);"></div></div>`,
         iconAnchor: [9, 9],
         iconSize: [18, 18],
+        popupAnchor: [0, -11],
       });
       userMarkerRef.current = L.marker(userLocation, { icon })
         .addTo(map)
@@ -285,29 +278,31 @@ export default function MapView() {
 
       if (cafe.name === "Kopi Selasar") {
         const html = `
-          <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.35))">
-            <div style="background:#7c4c2a;color:white;border-radius:8px;padding:5px 8px;text-align:center;font-family:sans-serif;min-width:90px;border:2px solid #f59e0b;position:relative">
-              <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">\u2B50 FEATURED</div>
-              <div style="font-size:13px;margin-top:4px">\u2615</div>
-              <div style="font-size:9px;font-weight:700;margin-top:1px;white-space:nowrap">Kopi Selasar</div>
+          <div style="position:relative;display:inline-flex;flex-direction:column;align-items:center;">
+            <div style="background:#7c4c2a;color:white;border-radius:10px;padding:6px 10px;text-align:center;border:2px solid #f59e0b;box-shadow:0 3px 10px rgba(0,0,0,0.4);min-width:90px;">
+              <div style="background:#f59e0b;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;margin-bottom:3px;display:inline-block;">\u2B50 FEATURED</div>
+              <div style="font-size:16px;line-height:1;">\u2615</div>
+              <div style="font-size:9px;font-weight:700;margin-top:2px;color:#ffe;white-space:nowrap;">Kopi Selasar</div>
             </div>
-            <div style="width:3px;height:14px;background:#7c4c2a"></div>
-            <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid #7c4c2a"></div>
+            <div style="width:3px;height:12px;background:#7c4c2a;margin:0 auto;"></div>
+            <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid #7c4c2a;"></div>
           </div>
         `;
         icon = L.divIcon({
           className: "",
           html,
-          iconAnchor: [48, 70],
-          iconSize: [96, 70],
+          iconAnchor: [50, 82],
+          iconSize: [100, 82],
+          popupAnchor: [0, -82],
         });
       } else {
         const color = slotColor(slots);
         icon = L.divIcon({
           className: "",
-          html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
-          iconAnchor: [10, 10],
-          iconSize: [20, 20],
+          html: `<div style="position:relative;width:24px;height:24px;"><div style="position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.5);"></div></div>`,
+          iconAnchor: [12, 12],
+          iconSize: [24, 24],
+          popupAnchor: [0, -14],
         });
       }
 
