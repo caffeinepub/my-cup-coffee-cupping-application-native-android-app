@@ -11,9 +11,11 @@ import {
   Award,
   Calendar,
   CheckCircle2,
+  ChevronRight,
   Coffee,
   Copy,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -25,7 +27,11 @@ import {
 } from "../hooks/useQueries";
 import CuppingRadarChart from "./CuppingRadarChart";
 
-export default function UserProfile() {
+interface UserProfileProps {
+  onViewGamification?: () => void;
+}
+
+export default function UserProfile({ onViewGamification }: UserProfileProps) {
   const { data: profile } = useGetCallerUserProfile();
   const { data: cuppings } = useGetCuppingsForUser();
   const { identity } = useInternetIdentity();
@@ -113,6 +119,31 @@ export default function UserProfile() {
             )}
           </button>
         </div>
+      )}
+
+      {/* View Achievements shortcut */}
+      {onViewGamification && (
+        <button
+          type="button"
+          onClick={onViewGamification}
+          data-ocid="profile.gamification.button"
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 hover:bg-primary/10 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <Trophy className="h-4 w-4 text-primary" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-primary leading-tight">
+                View Achievements
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Badges, challenges &amp; leaderboard
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-primary/60 group-hover:translate-x-0.5 transition-transform" />
+        </button>
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

@@ -1,41 +1,35 @@
-# My Cup — Login Flow Improvements
+# My Cup — Gamification Activity
 
 ## Current State
-- "Start for Free" and "Login" buttons both call the same `login()` function, which directly opens Internet Identity.
-- After a new user logs in, a simple `ProfileSetupModal` (small dialog) pops up asking only for a name.
-- After a returning user logs in, they land on the Map tab with no indication of their profile/user ID.
-- There is no welcome/registration experience for new members.
-- There is no "you're logged in" confirmation or profile preview for returning users.
+
+The app has a multi-tab authenticated view with: Map, Profile, Cupping, Scanner, Cafe Dashboard (owner), Admin tabs. The UserProfile tab shows level/progress/accuracy from the backend's UserProfile type (Level: novice/intermediate/advanced/expert, completedCuppings, accuracyPercentage, progress). No dedicated gamification/activity tab exists yet. There are skill levels defined in LandingPage (Novice, Apprentice, Intermediate, Advanced, Expert) and badges referenced in the EarnCoffeeDrawer (sample data only).
 
 ## Requested Changes (Diff)
 
 ### Add
-- A full-screen **Welcome / Registration page** for new users (those who have just logged in but have no profile yet). Should replace the ProfileSetupModal entirely. Must include:
-  - Welcome headline ("Welcome to My Cup!")
-  - Explanation that Internet Identity is used for decentralized, privacy-first login
-  - Display of the user's **Internet Identity Principal (User ID)** so they can see and copy it
-  - Name input field
-  - "Create My Profile" submit button
-  - Coffee-inspired branding consistent with the rest of the app
-- After a **returning user** logs in (has existing profile), automatically switch to the **Profile tab** so they immediately see their profile and User ID
-- In the **UserProfile** component, display the user's **Principal ID** (their Internet Identity user ID) prominently, so returning users can always see their unique ID
+- A new `Gamification` tab in the authenticated bottom nav (Trophy icon)
+- `GamificationDashboard` component with four sections:
+  1. **Level & XP Progress** — current level badge, XP bar, next-level milestone, animated progress ring
+  2. **Badges / Achievements** — grid of earned + locked badges with names & unlock criteria (based on cuppings count, accuracy, cafe visits, special feats)
+  3. **Weekly Challenges** — 3 active challenges with progress bars (e.g. "Submit 3 reviews this week", "Score above 80% accuracy", "Try a new cafe")
+  4. **Community Leaderboard** — top-10 ranked users by XP/cuppings (local demo data since no public leaderboard API exists), with the logged-in user's rank highlighted
+  5. **Activity Feed** — recent activity items per user (reviews submitted, badges earned, level-ups, QR redeemed)
 
 ### Modify
-- `ProfileSetupModal.tsx` → Replace with a full-screen welcome/registration page component (`WelcomeRegistrationPage.tsx`). Remove the Dialog wrapper, make it a full-page experience rendered inline in `App.tsx` or `HomePage.tsx`.
-- `HomePage.tsx` → After login, if the user has an existing profile (returning user), set `activeTab` to `"profile"` immediately on login so they land on the profile view.
-- `App.tsx` → Instead of showing `ProfileSetupModal` for new users, show the new `WelcomeRegistrationPage` full-screen.
-- `UserProfile.tsx` → Add a section at the top showing the user's Principal ID (their Internet Identity unique user ID) with a copy-to-clipboard button.
+- `HomePage.tsx` — add `"gamification"` to TabId union and navItems array
+- `UserProfile.tsx` — add a small "View Achievements" shortcut button that switches to gamification tab (via callback prop)
 
 ### Remove
-- `ProfileSetupModal.tsx` (replaced by `WelcomeRegistrationPage.tsx`)
+- Nothing removed
 
 ## Implementation Plan
-1. Create `src/frontend/src/components/WelcomeRegistrationPage.tsx` — full-screen welcome/registration for new users:
-   - Uses `useInternetIdentity` to get the identity/principal
-   - Shows Principal ID as the user's unique "My Cup ID" with copy button
-   - Name input + submit calls `saveCallerUserProfile`
-   - Coffee branding, espresso color palette
-2. Update `App.tsx` — replace `ProfileSetupModal` with `WelcomeRegistrationPage` (same condition: authenticated + no profile yet)
-3. Update `UserProfile.tsx` — add Principal ID display at top of profile with copy button
-4. Update `HomePage.tsx` — when `isAuthenticated` becomes true AND `userProfile` exists (returning user), set `activeTab = 'profile'` via a `useEffect` that fires once on login
-5. Delete `ProfileSetupModal.tsx` (or keep but unused — safe to remove)
+
+1. Create `src/frontend/src/components/GamificationDashboard.tsx`
+   - Uses existing UserProfile data from `useGetCallerUserProfile()` and cuppings from `useGetCuppingsForUser()`
+   - Level/XP calculated from `completedCuppings` and `accuracyPercentage`
+   - Badges: 12 badges total, earned/locked computed from profile data
+   - Challenges: 3 weekly challenges with deterministic progress from local state + cuppings count
+   - Leaderboard: demo top-10 with logged-in user's rank highlighted (local mock data)
+   - Activity feed: derived from cuppings list + badge unlocks
+2. Update `HomePage.tsx` to add gamification tab (`Trophy` icon, label "Badges")
+3. Minor tweak to `UserProfile.tsx` to add an "Achievements" shortcut

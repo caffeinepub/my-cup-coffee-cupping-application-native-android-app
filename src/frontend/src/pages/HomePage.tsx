@@ -5,12 +5,14 @@ import {
   QrCode,
   ShieldCheck,
   Store,
+  Trophy,
   User,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminDashboard from "../components/AdminDashboard";
 import CafeDashboard from "../components/CafeDashboard";
 import CuppingForm from "../components/CuppingForm";
+import GamificationDashboard from "../components/GamificationDashboard";
 import LandingPage from "../components/LandingPage";
 import MapView from "../components/MapView";
 import QRCodeScanner from "../components/QRCodeScanner";
@@ -22,7 +24,14 @@ import {
   useIsAdmin,
 } from "../hooks/useQueries";
 
-type TabId = "map" | "profile" | "cupping" | "scanner" | "dashboard" | "admin";
+type TabId =
+  | "map"
+  | "profile"
+  | "cupping"
+  | "scanner"
+  | "dashboard"
+  | "admin"
+  | "gamification";
 
 interface NavItem {
   id: TabId;
@@ -121,6 +130,11 @@ export default function HomePage() {
       icon: <User className="h-5 w-5" />,
     },
     {
+      id: "gamification",
+      label: "Rewards",
+      icon: <Trophy className="h-5 w-5" />,
+    },
+    {
       id: "cupping",
       label: "Cupping",
       icon: <ClipboardList className="h-5 w-5" />,
@@ -169,7 +183,14 @@ export default function HomePage() {
         )}
         {activeTab === "profile" && (
           <div className="p-4">
-            <UserProfile />
+            <UserProfile
+              onViewGamification={() => setActiveTab("gamification")}
+            />
+          </div>
+        )}
+        {activeTab === "gamification" && (
+          <div className="p-4">
+            <GamificationDashboard />
           </div>
         )}
         {activeTab === "cupping" && (
