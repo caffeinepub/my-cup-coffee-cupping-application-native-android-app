@@ -36,8 +36,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DailyStats } from "../backend";
 import { useGetDailyStats, useSeedDemoCafes } from "../hooks/useQueries";
+import type { DailyStats } from "../types/backend-types";
 
 interface DayData {
   date: string;

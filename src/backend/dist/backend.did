@@ -1,0 +1,171 @@
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   accuracyPercentage: float64;
+   completedCuppings: nat;
+   cuppingHistory: CuppingHistory;
+   level: Level;
+   name: text;
+   phoneNumber: opt text;
+   progress: nat;
+ };
+type Timestamp = int;
+type QRCodeId = text;
+type QRCodeData = 
+ record {
+   cafe: CafeId;
+   coffee: CoffeeId;
+   expiryTime: Timestamp;
+   id: QRCodeId;
+   redeemed: bool;
+   redemptionTimestamp: opt Timestamp;
+   user: principal;
+ };
+type Location = 
+ record {
+   latitude: float64;
+   longitude: float64;
+ };
+type Level = 
+ variant {
+   advanced;
+   expert;
+   intermediate;
+   novice;
+ };
+type IntensityLevels = 
+ record {
+   acidity: nat;
+   aftertaste: nat;
+   balance: nat;
+   body: nat;
+   flavor: nat;
+   fragrance: nat;
+ };
+type DailyStats = 
+ record {
+   cafesRegistered: nat;
+   cuppingSubmissions: nat;
+   newUsers: nat;
+   qrCodesRedeemed: nat;
+ };
+type CuppingSubmission = 
+ record {
+   cafe: CafeId;
+   coffeeId: CoffeeId;
+   id: CuppingId;
+   intensityLevels: IntensityLevels;
+   qrCodeId: QRCodeId;
+   scores: CoffeeScores;
+   timestamp: Timestamp;
+   user: principal;
+ };
+type CuppingId = text;
+type CuppingHistory = 
+ record {
+   acidity: nat;
+   aftertaste: nat;
+   balance: nat;
+   body: nat;
+   cleanCup: nat;
+   flavor: nat;
+   fragrance: nat;
+   overall: nat;
+   sweetness: nat;
+   uniformity: nat;
+ };
+type CoffeeScores = 
+ record {
+   acidity: float64;
+   aftertaste: float64;
+   aroma: float64;
+   balance: float64;
+   body: float64;
+   cleanCup: float64;
+   flavor: float64;
+   fragrance: float64;
+   overall: float64;
+   sweetness: float64;
+   uniformity: float64;
+ };
+type CoffeeId = text;
+type Coffee = 
+ record {
+   flavorProfile: text;
+   id: CoffeeId;
+   name: text;
+   origin: text;
+   roastLevel: text;
+ };
+type CafeProfile = 
+ record {
+   availableCoffees: vec Coffee;
+   availableFreeCups: nat;
+   averageScores: CoffeeScores;
+   id: CafeId;
+   location: Location;
+   name: text;
+   owner: principal;
+   roastLevel: text;
+ };
+type CafeId = text;
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  addCoffeeToCafe: (cafeId: CafeId, coffee: Coffee) -> ();
+  assignCafeOwner: (cafeId: CafeId, owner: principal) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createCafeProfile: (owner: principal, name: text, latitude: float64,
+   longitude: float64, roastLevel: text, availableFreeCups: nat) ->
+   (CafeProfile);
+  exportCafeData: (cafeId: CafeId) -> (text) query;
+  generateQRCode: (cafeId: CafeId, coffeeId: CoffeeId) -> (QRCodeData);
+  getCafeForOwner: () -> (opt CafeProfile) query;
+  getCafeProfile: (cafeId: CafeId) -> (opt CafeProfile) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCuppingsForCafe: (cafeId: CafeId) -> (vec CuppingSubmission) query;
+  getCuppingsForUser: (user: principal) -> (vec CuppingSubmission) query;
+  getDailyStats: () -> (vec record {
+                              text;
+                              DailyStats;
+                            }) query;
+  getFilteredCafes: (_maxDistance: float64, _minRoastLevel: text) ->
+   (vec CafeProfile) query;
+  getQRCode: (qrCodeId: QRCodeId) -> (opt QRCodeData) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  isAdmin: () -> (bool) query;
+  isCallerAdmin: () -> (bool) query;
+  redeemQRCode: (qrCodeId: QRCodeId) -> ();
+  removeCoffeeFromCafe: (cafeId: CafeId, coffeeId: CoffeeId) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  submitCuppingForm: (qrCodeId: QRCodeId, scores: CoffeeScores,
+   intensityLevels: IntensityLevels) -> ();
+  updateCafeFreeCups: (cafeId: CafeId, availableFreeCups: nat) -> ();
+}

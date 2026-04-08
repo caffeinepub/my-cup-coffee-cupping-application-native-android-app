@@ -1,0 +1,281 @@
+// Version: 3.0.0
+type CafeId__910808712 = Text;
+type CafeProfile__253633355 =
+  {
+    availableCoffees : [Coffee__255243287];
+    availableFreeCups : Nat;
+    averageScores : CoffeeScores__1061562101;
+    id : CafeId__910808712;
+    location : Location__31265466;
+    name : Text;
+    owner : Principal;
+    roastLevel : Text
+  };
+type CoffeeId__218581326 = Text;
+type CoffeeScores__1061562101 =
+  {
+    acidity : Float;
+    aftertaste : Float;
+    aroma : Float;
+    balance : Float;
+    body : Float;
+    cleanCup : Float;
+    flavor : Float;
+    fragrance : Float;
+    overall : Float;
+    sweetness : Float;
+    uniformity : Float
+  };
+type Coffee__255243287 =
+  {
+    flavorProfile : Text;
+    id : CoffeeId__218581326;
+    name : Text;
+    origin : Text;
+    roastLevel : Text
+  };
+type CuppingHistory__256644487 =
+  {
+    acidity : Nat;
+    aftertaste : Nat;
+    balance : Nat;
+    body : Nat;
+    cleanCup : Nat;
+    flavor : Nat;
+    fragrance : Nat;
+    overall : Nat;
+    sweetness : Nat;
+    uniformity : Nat
+  };
+type CuppingId__708370014 = Text;
+type CuppingSubmission__1025685664 =
+  {
+    cafe : CafeId__910808712;
+    coffeeId : CoffeeId__218581326;
+    id : CuppingId__708370014;
+    intensityLevels : IntensityLevels__119022014;
+    qrCodeId : QRCodeId__68102942;
+    scores : CoffeeScores__1061562101;
+    timestamp : Timestamp__672038077;
+    user : Principal
+  };
+type DailyStats__26569531 =
+  {
+    cafesRegistered : Nat;
+    cuppingSubmissions : Nat;
+    newUsers : Nat;
+    qrCodesRedeemed : Nat
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type IntensityLevels__119022014 =
+  {
+    acidity : Nat;
+    aftertaste : Nat;
+    balance : Nat;
+    body : Nat;
+    flavor : Nat;
+    fragrance : Nat
+  };
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Level__23796789 = {#advanced; #expert; #intermediate; #novice};
+type Location__31265466 = {latitude : Float; longitude : Float};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OldAccessControlState__841599830 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__605269027<Principal, OldUserRole__889293160>
+  };
+type OldCafeId__480805512 = Text;
+type OldCafeProfile__631344860 =
+  {
+    availableCoffees : [OldCoffee__403755617];
+    availableFreeCups : Nat;
+    averageScores : OldCoffeeScores__118776056;
+    id : OldCafeId__480805512;
+    location : OldLocation__97846908;
+    name : Text;
+    owner : Principal;
+    photos : [Blob];
+    roastLevel : Text
+  };
+type OldCoffeeId__963162815 = Text;
+type OldCoffeeScores__118776056 =
+  {
+    acidity : Float;
+    aftertaste : Float;
+    balance : Float;
+    body : Float;
+    cleanCup : Float;
+    flavor : Float;
+    fragrance : Float;
+    overall : Float;
+    sweetness : Float;
+    uniformity : Float
+  };
+type OldCoffee__403755617 =
+  {
+    flavorProfile : Text;
+    id : OldCoffeeId__963162815;
+    name : Text;
+    origin : Text;
+    roastLevel : Text
+  };
+type OldCuppingHistory__454370749 =
+  {
+    acidity : Nat;
+    aftertaste : Nat;
+    balance : Nat;
+    body : Nat;
+    cleanCup : Nat;
+    flavor : Nat;
+    fragrance : Nat;
+    overall : Nat;
+    sweetness : Nat;
+    uniformity : Nat
+  };
+type OldCuppingId__926418940 = Text;
+type OldCuppingSubmission__382512591 =
+  {
+    cafe : OldCafeId__480805512;
+    coffee : OldCoffeeId__963162815;
+    id : OldCuppingId__926418940;
+    intensityLevels : OldIntensityLevels__625178735;
+    photo : ?Blob;
+    qrCodeId : OldQRCodeId__580927478;
+    scores : OldCoffeeScores__118776056;
+    timestamp : OldTimestamp__27916213;
+    user : Principal
+  };
+type OldDailyStats__759147420 =
+  {
+    cafesRegistered : Nat;
+    cuppingSubmissions : Nat;
+    newUsers : Nat;
+    qrCodesRedeemed : Nat
+  };
+type OldIntensityLevels__625178735 =
+  {
+    acidity : Nat;
+    aftertaste : Nat;
+    balance : Nat;
+    body : Nat;
+    flavor : Nat;
+    fragrance : Nat
+  };
+type OldLevel__839197811 = {#advanced; #expert; #intermediate; #novice};
+type OldLocation__97846908 = {latitude : Float; longitude : Float};
+type OldQRCodeData__15004841 =
+  {
+    cafe : OldCafeId__480805512;
+    coffee : OldCoffeeId__963162815;
+    id : OldQRCodeId__580927478;
+    redeemed : Bool;
+    redemptionTimestamp : ?OldTimestamp__27916213;
+    timestamp : OldTimestamp__27916213;
+    user : Principal
+  };
+type OldQRCodeId__580927478 = Text;
+type OldTimestamp__27916213 = Int;
+type OldUserProfile__416069324 =
+  {
+    accuracyPercentage : Float;
+    completedCuppings : Nat;
+    cuppingHistory : OldCuppingHistory__454370749;
+    level : OldLevel__839197811;
+    name : Text;
+    progress : Nat
+  };
+type OldUserRole__889293160 = {#admin; #guest; #user};
+type QRCodeData__460497149 =
+  {
+    cafe : CafeId__910808712;
+    coffee : CoffeeId__218581326;
+    expiryTime : Timestamp__672038077;
+    id : QRCodeId__68102942;
+    redeemed : Bool;
+    redemptionTimestamp : ?Timestamp__672038077;
+    user : Principal
+  };
+type QRCodeId__68102942 = Text;
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type Timestamp__672038077 = Time__900049286;
+type UserProfile__491224006 =
+  {
+    accuracyPercentage : Float;
+    completedCuppings : Nat;
+    cuppingHistory : CuppingHistory__256644487;
+    level : Level__23796789;
+    name : Text;
+    phoneNumber : ?Text;
+    progress : Nat
+  };
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor ({
+  in accessControlState : OldAccessControlState__841599830;
+  in admin : ?Principal;
+  in cafeOwners : Map__605269027<Principal, OldCafeId__480805512>;
+  in cafeProfiles :
+    Map__605269027<OldCafeId__480805512, OldCafeProfile__631344860>;
+  in cuppingSubmissions :
+    Map__605269027<OldCuppingId__926418940, OldCuppingSubmission__382512591>;
+  in dailyStats : Map__605269027<Text, OldDailyStats__759147420>;
+  in var nextCafeId : Nat;
+  in var nextCuppingId : Nat;
+  in var nextQRCodeId : Nat;
+  in qrCodes :
+    Map__605269027<OldQRCodeId__580927478, OldQRCodeData__15004841>;
+  in userProfiles : Map__605269027<Principal, OldUserProfile__416069324>
+}, {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable cafeOwners :
+    {
+      var root : Node__46230540<Principal, CafeId__910808712>;
+      var size : Nat__490723111
+    };
+  stable cafeProfiles :
+    {
+      var root : Node__46230540<CafeId__910808712, CafeProfile__253633355>;
+      var size : Nat__490723111
+    };
+  stable cuppingSubmissions :
+    {
+      var root :
+        Node__46230540<CuppingId__708370014, CuppingSubmission__1025685664>;
+      var size : Nat__490723111
+    };
+  stable dailyStats :
+    {
+      var root : Node__46230540<Text, DailyStats__26569531>;
+      var size : Nat__490723111
+    };
+  stable var nextCafeId : Nat;
+  stable var nextCuppingId : Nat;
+  stable var nextQRCodeId : Nat;
+  stable qrCodes :
+    {
+      var root : Node__46230540<QRCodeId__68102942, QRCodeData__460497149>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    }
+}) ;

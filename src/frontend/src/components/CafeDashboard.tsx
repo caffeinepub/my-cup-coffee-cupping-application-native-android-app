@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Coffee, Download, Plus, Trash2, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { CoffeeScores, Coffee as CoffeeType } from "../backend";
 import {
   useAddCoffeeToCafe,
   useExportCafeData,
@@ -29,6 +28,10 @@ import {
   useRemoveCoffeeFromCafe,
   useUpdateCafeFreeCups,
 } from "../hooks/useQueries";
+import type {
+  CoffeeScores,
+  Coffee as CoffeeType,
+} from "../types/backend-types";
 import CuppingRadarChart from "./CuppingRadarChart";
 
 export default function CafeDashboard() {
@@ -140,6 +143,9 @@ export default function CafeDashboard() {
       ? {
           fragrance:
             cuppings.reduce((sum, c) => sum + c.scores.fragrance, 0) /
+            cuppings.length,
+          aroma:
+            cuppings.reduce((sum, c) => sum + c.scores.aroma, 0) /
             cuppings.length,
           flavor:
             cuppings.reduce((sum, c) => sum + c.scores.flavor, 0) /

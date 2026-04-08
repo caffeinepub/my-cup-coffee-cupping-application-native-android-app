@@ -1,32 +1,33 @@
-import AccessControl "authorization/access-control";
 import Map "mo:core/Map";
 import List "mo:core/List";
 import Text "mo:core/Text";
 import Time "mo:core/Time";
 import Int "mo:core/Int";
 import Float "mo:core/Float";
-import Nat "mo:core/Nat";
-import Array "mo:core/Array";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-import Storage "blob-storage/Storage";
-import MixinStorage "blob-storage/Mixin";
+import AccessControl "mo:caffeineai-authorization/access-control";
+import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
+import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
-  include MixinStorage();
-
   type Timestamp = Time.Time;
   type CafeId = Text;
   type CoffeeId = Text;
   type CuppingId = Text;
   type QRCodeId = Text;
 
-  stable var admin : ?Principal = null;
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+  include MixinObjectStorage();
 
-  public type UserRole = AccessControl.UserRole;
+  // ── Domain Types ──────────────────────────────────────────────────────────
 
   public type UserProfile = {
     name : Text;
+    phoneNumber : ?Text;
     completedCuppings : Nat;
     accuracyPercentage : Float;
     level : Level;
@@ -61,7 +62,6 @@ actor {
     location : Location;
     roastLevel : Text;
     availableFreeCups : Nat;
-    photos : [Storage.ExternalBlob];
     averageScores : CoffeeScores;
     availableCoffees : [Coffee];
   };
@@ -81,6 +81,7 @@ actor {
 
   public type CoffeeScores = {
     fragrance : Float;
+    aroma : Float;
     flavor : Float;
     aftertaste : Float;
     acidity : Float;
@@ -96,10 +97,9 @@ actor {
     id : CuppingId;
     user : Principal;
     cafe : CafeId;
-    coffee : CoffeeId;
+    coffeeId : CoffeeId;
     scores : CoffeeScores;
     intensityLevels : IntensityLevels;
-    photo : ?Storage.ExternalBlob;
     timestamp : Timestamp;
     qrCodeId : QRCodeId;
   };
@@ -119,7 +119,7 @@ actor {
     cafe : CafeId;
     coffee : CoffeeId;
     redeemed : Bool;
-    timestamp : Timestamp;
+    expiryTime : Timestamp;
     redemptionTimestamp : ?Timestamp;
   };
 
@@ -130,7 +130,8 @@ actor {
     cafesRegistered : Nat;
   };
 
-  // Storage
+  // ── State ─────────────────────────────────────────────────────────────────
+
   let userProfiles = Map.empty<Principal, UserProfile>();
   let cafeProfiles = Map.empty<CafeId, CafeProfile>();
   let cuppingSubmissions = Map.empty<CuppingId, CuppingSubmission>();
@@ -141,7 +142,8 @@ actor {
   var nextCuppingId : Nat = 0;
   var nextQRCodeId : Nat = 0;
 
-  // Helper functions
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
   func generateCafeId() : CafeId {
     let id = "CAFE_" # nextCafeId.toText();
     nextCafeId += 1;
@@ -196,76 +198,20 @@ actor {
     };
 
     let updatedStats = switch (stat) {
-      case ("newUsers") {
-        {
-          newUsers = currentStats.newUsers + 1;
-          cuppingSubmissions = currentStats.cuppingSubmissions;
-          qrCodesRedeemed = currentStats.qrCodesRedeemed;
-          cafesRegistered = currentStats.cafesRegistered;
-        };
-      };
-      case ("cuppingSubmissions") {
-        {
-          newUsers = currentStats.newUsers;
-          cuppingSubmissions = currentStats.cuppingSubmissions + 1;
-          qrCodesRedeemed = currentStats.qrCodesRedeemed;
-          cafesRegistered = currentStats.cafesRegistered;
-        };
-      };
-      case ("qrCodesRedeemed") {
-        {
-          newUsers = currentStats.newUsers;
-          cuppingSubmissions = currentStats.cuppingSubmissions;
-          qrCodesRedeemed = currentStats.qrCodesRedeemed + 1;
-          cafesRegistered = currentStats.cafesRegistered;
-        };
-      };
-      case ("cafesRegistered") {
-        {
-          newUsers = currentStats.newUsers;
-          cuppingSubmissions = currentStats.cuppingSubmissions;
-          qrCodesRedeemed = currentStats.qrCodesRedeemed;
-          cafesRegistered = currentStats.cafesRegistered + 1;
-        };
-      };
+      case ("newUsers") { { currentStats with newUsers = currentStats.newUsers + 1 } };
+      case ("cuppingSubmissions") { { currentStats with cuppingSubmissions = currentStats.cuppingSubmissions + 1 } };
+      case ("qrCodesRedeemed") { { currentStats with qrCodesRedeemed = currentStats.qrCodesRedeemed + 1 } };
+      case ("cafesRegistered") { { currentStats with cafesRegistered = currentStats.cafesRegistered + 1 } };
       case (_) { currentStats };
     };
 
     dailyStats.add(currentDate, updatedStats);
   };
 
-  // Admin check - persistent and upgrade safe.
-  // Returns true only when the caller's principal matches the stored admin principal.
-  public query ({ caller }) func isAdmin() : async Bool {
-    switch (admin) {
-      case (?adminPrincipal) { caller == adminPrincipal };
-      case (null) { false };
-    };
-  };
+  // ── User Profile API ──────────────────────────────────────────────────────
 
-  // Authorization
-  let accessControlState = AccessControl.initState();
-
-  public shared ({ caller }) func initializeAccessControl() : async () {
-    AccessControl.initialize(accessControlState, caller);
-  };
-
-  public query ({ caller }) func getCallerUserRole() : async AccessControl.UserRole {
-    AccessControl.getUserRole(accessControlState, caller);
-  };
-
-  public shared ({ caller }) func assignCallerUserRole(user : Principal, role : AccessControl.UserRole) : async () {
-    // Admin-only check happens inside AccessControl.assignRole
-    AccessControl.assignRole(accessControlState, caller, user, role);
-  };
-
-  public query ({ caller }) func isCallerAdmin() : async Bool {
-    AccessControl.isAdmin(accessControlState, caller);
-  };
-
-  // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can access profiles");
     };
     userProfiles.get(caller);
@@ -279,14 +225,15 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
     incrementDailyStat("newUsers");
   };
 
-  // Cafe Management (Admin only for creation)
+  // ── Cafe Management ───────────────────────────────────────────────────────
+
   public shared ({ caller }) func createCafeProfile(
     owner : Principal,
     name : Text,
@@ -295,7 +242,7 @@ actor {
     roastLevel : Text,
     availableFreeCups : Nat
   ) : async CafeProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can create cafe profiles");
     };
 
@@ -307,9 +254,9 @@ actor {
       location = { latitude; longitude };
       roastLevel;
       availableFreeCups;
-      photos = [];
       averageScores = {
         fragrance = 0.0;
+        aroma = 0.0;
         flavor = 0.0;
         aftertaste = 0.0;
         acidity = 0.0;
@@ -329,29 +276,15 @@ actor {
     cafeProfile;
   };
 
-  // Cafe Owner Functions
   public shared ({ caller }) func updateCafeFreeCups(cafeId : CafeId, availableFreeCups : Nat) : async () {
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Only the cafe owner or admin can update free cups");
     };
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
-        let updatedCafe = {
-          id = cafe.id;
-          owner = cafe.owner;
-          name = cafe.name;
-          location = cafe.location;
-          roastLevel = cafe.roastLevel;
-          availableFreeCups;
-          photos = cafe.photos;
-          averageScores = cafe.averageScores;
-          availableCoffees = cafe.availableCoffees;
-        };
-        cafeProfiles.add(cafeId, updatedCafe);
+        cafeProfiles.add(cafeId, { cafe with availableFreeCups });
       };
-      case null {
-        Runtime.trap("Cafe not found");
-      };
+      case null { Runtime.trap("Cafe not found") };
     };
   };
 
@@ -361,23 +294,9 @@ actor {
     };
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
-        let updatedCoffees = cafe.availableCoffees.concat([coffee]);
-        let updatedCafe = {
-          id = cafe.id;
-          owner = cafe.owner;
-          name = cafe.name;
-          location = cafe.location;
-          roastLevel = cafe.roastLevel;
-          availableFreeCups = cafe.availableFreeCups;
-          photos = cafe.photos;
-          averageScores = cafe.averageScores;
-          availableCoffees = updatedCoffees;
-        };
-        cafeProfiles.add(cafeId, updatedCafe);
+        cafeProfiles.add(cafeId, { cafe with availableCoffees = cafe.availableCoffees.concat([coffee]) });
       };
-      case null {
-        Runtime.trap("Cafe not found");
-      };
+      case null { Runtime.trap("Cafe not found") };
     };
   };
 
@@ -387,23 +306,9 @@ actor {
     };
     switch (cafeProfiles.get(cafeId)) {
       case (?cafe) {
-        let updatedCoffees = cafe.availableCoffees.filter(func(c) { c.id != coffeeId });
-        let updatedCafe = {
-          id = cafe.id;
-          owner = cafe.owner;
-          name = cafe.name;
-          location = cafe.location;
-          roastLevel = cafe.roastLevel;
-          availableFreeCups = cafe.availableFreeCups;
-          photos = cafe.photos;
-          averageScores = cafe.averageScores;
-          availableCoffees = updatedCoffees;
-        };
-        cafeProfiles.add(cafeId, updatedCafe);
+        cafeProfiles.add(cafeId, { cafe with availableCoffees = cafe.availableCoffees.filter(func(c) { c.id != coffeeId }) });
       };
-      case null {
-        Runtime.trap("Cafe not found");
-      };
+      case null { Runtime.trap("Cafe not found") };
     };
   };
 
@@ -414,23 +319,9 @@ actor {
     };
   };
 
-  public query ({ caller }) func getCuppingsForCafe(cafeId : CafeId) : async [CuppingSubmission] {
-    if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only the cafe owner or admin can view cafe cuppings");
-    };
-    let cafeCuppings = List.empty<CuppingSubmission>();
-    for ((id, cupping) in cuppingSubmissions.entries()) {
-      if (cupping.cafe == cafeId) {
-        cafeCuppings.add(cupping);
-      };
-    };
-    cafeCuppings.toArray();
-  };
-
-  // Public Cafe Discovery (no auth required)
-  public query func getFilteredCafes(maxDistance : Float, minRoastLevel : Text) : async [CafeProfile] {
+  public query func getFilteredCafes(_maxDistance : Float, _minRoastLevel : Text) : async [CafeProfile] {
     let cafes = List.empty<CafeProfile>();
-    for ((id, cafe) in cafeProfiles.entries()) {
+    for ((_, cafe) in cafeProfiles.entries()) {
       cafes.add(cafe);
     };
     cafes.toArray();
@@ -440,9 +331,23 @@ actor {
     cafeProfiles.get(cafeId);
   };
 
-  // QR Code Management
+  public shared ({ caller }) func assignCafeOwner(cafeId : CafeId, owner : Principal) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can assign cafe owners");
+    };
+    switch (cafeProfiles.get(cafeId)) {
+      case null { Runtime.trap("Cafe not found") };
+      case (?cafe) {
+        cafeProfiles.add(cafeId, { cafe with owner });
+        cafeOwners.add(owner, cafeId);
+      };
+    };
+  };
+
+  // ── QR Code API ───────────────────────────────────────────────────────────
+
   public shared ({ caller }) func generateQRCode(cafeId : CafeId, coffeeId : CoffeeId) : async QRCodeData {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can generate QR codes");
     };
     switch (cafeProfiles.get(cafeId)) {
@@ -455,13 +360,14 @@ actor {
     };
 
     let qrCodeId = generateQRCodeId();
+    let twentyFourHours : Int = 24 * 60 * 60 * 1_000_000_000;
     let qrCode : QRCodeData = {
       id = qrCodeId;
       user = caller;
       cafe = cafeId;
       coffee = coffeeId;
       redeemed = false;
-      timestamp = Time.now();
+      expiryTime = Time.now() + twentyFourHours;
       redemptionTimestamp = null;
     };
 
@@ -480,32 +386,12 @@ actor {
           Runtime.trap("QR code already redeemed");
         };
 
-        let updatedQRCode = {
-          id = qrCode.id;
-          user = qrCode.user;
-          cafe = qrCode.cafe;
-          coffee = qrCode.coffee;
-          redeemed = true;
-          timestamp = qrCode.timestamp;
-          redemptionTimestamp = ?Time.now();
-        };
-        qrCodes.add(qrCodeId, updatedQRCode);
+        qrCodes.add(qrCodeId, { qrCode with redeemed = true; redemptionTimestamp = ?Time.now() });
 
         switch (cafeProfiles.get(qrCode.cafe)) {
           case (?cafe) {
             if (cafe.availableFreeCups > 0) {
-              let updatedCafe = {
-                id = cafe.id;
-                owner = cafe.owner;
-                name = cafe.name;
-                location = cafe.location;
-                roastLevel = cafe.roastLevel;
-                availableFreeCups = cafe.availableFreeCups - 1;
-                photos = cafe.photos;
-                averageScores = cafe.averageScores;
-                availableCoffees = cafe.availableCoffees;
-              };
-              cafeProfiles.add(qrCode.cafe, updatedCafe);
+              cafeProfiles.add(qrCode.cafe, { cafe with availableFreeCups = cafe.availableFreeCups - 1 });
             };
           };
           case null {};
@@ -528,14 +414,14 @@ actor {
     };
   };
 
-  // Cupping Submission
+  // ── Cupping API ───────────────────────────────────────────────────────────
+
   public shared ({ caller }) func submitCuppingForm(
     qrCodeId : QRCodeId,
     scores : CoffeeScores,
-    intensityLevels : IntensityLevels,
-    photo : ?Storage.ExternalBlob
+    intensityLevels : IntensityLevels
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can submit cupping forms");
     };
     switch (qrCodes.get(qrCodeId)) {
@@ -563,10 +449,9 @@ actor {
           id = cuppingId;
           user = caller;
           cafe = qrCode.cafe;
-          coffee = qrCode.coffee;
+          coffeeId = qrCode.coffee;
           scores;
           intensityLevels;
-          photo;
           timestamp = now;
           qrCodeId;
         };
@@ -582,7 +467,7 @@ actor {
       Runtime.trap("Unauthorized: Can only view your own cupping submissions");
     };
     let userCuppings = List.empty<CuppingSubmission>();
-    for ((id, cupping) in cuppingSubmissions.entries()) {
+    for ((_, cupping) in cuppingSubmissions.entries()) {
       if (cupping.user == user) {
         userCuppings.add(cupping);
       };
@@ -590,25 +475,32 @@ actor {
     userCuppings.toArray();
   };
 
-  public query ({ caller }) func getProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
+  public query ({ caller }) func getCuppingsForCafe(cafeId : CafeId) : async [CuppingSubmission] {
+    if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only the cafe owner or admin can view cafe cuppings");
     };
-    userProfiles.get(user);
+    let cafeCuppings = List.empty<CuppingSubmission>();
+    for ((_, cupping) in cuppingSubmissions.entries()) {
+      if (cupping.cafe == cafeId) {
+        cafeCuppings.add(cupping);
+      };
+    };
+    cafeCuppings.toArray();
   };
 
   public query ({ caller }) func exportCafeData(cafeId : CafeId) : async Text {
     if (not isCafeOwner(caller, cafeId) and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Only the cafe owner or admin can export cafe data");
     };
-    var csv = "Cupping ID,User,Coffee,Fragrance,Flavor,Aftertaste,Acidity,Body,Balance,Uniformity,Sweetness,Clean Cup,Overall,Timestamp\n";
+    var csv = "Cupping ID,User,Coffee,Fragrance,Aroma,Flavor,Aftertaste,Acidity,Body,Balance,Uniformity,Sweetness,Clean Cup,Overall,Timestamp\n";
 
-    for ((id, cupping) in cuppingSubmissions.entries()) {
+    for ((_, cupping) in cuppingSubmissions.entries()) {
       if (cupping.cafe == cafeId) {
         csv #= cupping.id # "," #
               cupping.user.toText() # "," #
-              cupping.coffee # "," #
+              cupping.coffeeId # "," #
               cupping.scores.fragrance.toText() # "," #
+              cupping.scores.aroma.toText() # "," #
               cupping.scores.flavor.toText() # "," #
               cupping.scores.aftertaste.toText() # "," #
               cupping.scores.acidity.toText() # "," #
@@ -625,34 +517,14 @@ actor {
     csv;
   };
 
-  public shared ({ caller }) func assignCafeOwner(cafeId : CafeId, owner : Principal) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can assign cafe owners");
-    };
-    switch (cafeProfiles.get(cafeId)) {
-      case null { Runtime.trap("Cafe not found") };
-      case (?cafe) {
-        let updatedCafe = {
-          id = cafe.id;
-          owner;
-          name = cafe.name;
-          location = cafe.location;
-          roastLevel = cafe.roastLevel;
-          availableFreeCups = cafe.availableFreeCups;
-          photos = cafe.photos;
-          averageScores = cafe.averageScores;
-          availableCoffees = cafe.availableCoffees;
-        };
-        cafeProfiles.add(cafeId, updatedCafe);
-        cafeOwners.add(owner, cafeId);
-      };
-    };
+  // ── Admin API ─────────────────────────────────────────────────────────────
+
+  public query ({ caller }) func isAdmin() : async Bool {
+    AccessControl.isAdmin(accessControlState, caller);
   };
 
-  public shared ({ caller }) func _dummyUpdateLocation(location : Location) : async () {};
-
   public query ({ caller }) func getDailyStats() : async [(Text, DailyStats)] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admin can retrieve stats");
     };
     dailyStats.toArray();

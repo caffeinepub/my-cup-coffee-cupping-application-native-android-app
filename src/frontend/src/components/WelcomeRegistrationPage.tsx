@@ -1,16 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, Coffee, Copy, Loader2 } from "lucide-react";
+import { CheckCircle2, Coffee, Copy, Loader2, Phone } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Level } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useSaveCallerUserProfile } from "../hooks/useQueries";
+import type { Level } from "../types/backend-types";
 
 export default function WelcomeRegistrationPage() {
   const { identity } = useInternetIdentity();
   const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [copied, setCopied] = useState(false);
   const saveProfile = useSaveCallerUserProfile();
 
@@ -37,9 +38,10 @@ export default function WelcomeRegistrationPage() {
     try {
       await saveProfile.mutateAsync({
         name: name.trim(),
+        phoneNumber: phoneNumber.trim() || null,
         completedCuppings: BigInt(0),
         accuracyPercentage: 0,
-        level: Level.novice,
+        level: { novice: null } as Level,
         progress: BigInt(0),
         cuppingHistory: {
           fragrance: BigInt(0),
@@ -147,6 +149,29 @@ export default function WelcomeRegistrationPage() {
               autoComplete="name"
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400 focus:ring-amber-400/30 h-12 rounded-xl text-base"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="reg-phone"
+              className="text-sm font-medium text-amber-200"
+            >
+              Phone Number{" "}
+              <span className="text-white/40 font-normal">(optional)</span>
+            </Label>
+            <div className="relative">
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-400/60 pointer-events-none" />
+              <Input
+                id="reg-phone"
+                data-ocid="welcome_registration.phone_input"
+                type="tel"
+                placeholder="+62 xxx xxx xxx"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                autoComplete="tel"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-amber-400 focus:ring-amber-400/30 h-12 rounded-xl text-base pl-10"
+              />
+            </div>
           </div>
 
           <Button

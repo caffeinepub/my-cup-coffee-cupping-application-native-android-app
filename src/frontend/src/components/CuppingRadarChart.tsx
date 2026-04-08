@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import type { CoffeeScores } from "../backend";
+import type { CoffeeScores } from "../types/backend-types";
 
 interface CuppingRadarChartProps {
   scores: CoffeeScores;

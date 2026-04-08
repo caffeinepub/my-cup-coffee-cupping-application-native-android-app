@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Coffee, LogIn, LogOut } from "lucide-react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
+import { getLevelLabel } from "../types/backend-types";
 
 export default function Header() {
   const { login, clear, loginStatus, identity } = useInternetIdentity();
@@ -69,7 +70,7 @@ export default function Header() {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">{userProfile.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Level: {userProfile.level}
+                      Level: {getLevelLabel(userProfile.level)}
                     </p>
                   </div>
                 </DropdownMenuLabel>

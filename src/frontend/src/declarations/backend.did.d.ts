@@ -20,7 +20,6 @@ export interface CafeProfile {
   'availableFreeCups' : bigint,
   'roastLevel' : string,
   'location' : Location,
-  'photos' : Array<ExternalBlob>,
 }
 export interface Coffee {
   'id' : CoffeeId,
@@ -33,6 +32,7 @@ export type CoffeeId = string;
 export interface CoffeeScores {
   'acidity' : number,
   'balance' : number,
+  'aroma' : number,
   'cleanCup' : number,
   'sweetness' : number,
   'flavor' : number,
@@ -62,8 +62,7 @@ export interface CuppingSubmission {
   'user' : Principal,
   'timestamp' : Timestamp,
   'qrCodeId' : QRCodeId,
-  'photo' : [] | [ExternalBlob],
-  'coffee' : CoffeeId,
+  'coffeeId' : CoffeeId,
   'intensityLevels' : IntensityLevels,
 }
 export interface DailyStats {
@@ -72,7 +71,6 @@ export interface DailyStats {
   'cuppingSubmissions' : bigint,
   'cafesRegistered' : bigint,
 }
-export type ExternalBlob = Uint8Array;
 export interface IntensityLevels {
   'acidity' : bigint,
   'balance' : bigint,
@@ -91,8 +89,8 @@ export interface QRCodeData {
   'redemptionTimestamp' : [] | [Timestamp],
   'cafe' : CafeId,
   'redeemed' : boolean,
+  'expiryTime' : Timestamp,
   'user' : Principal,
-  'timestamp' : Timestamp,
   'coffee' : CoffeeId,
 }
 export type QRCodeId = string;
@@ -104,38 +102,42 @@ export interface UserProfile {
   'name' : string,
   'level' : Level,
   'progress' : bigint,
+  'phoneNumber' : [] | [string],
 }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface _CaffeineStorageCreateCertificateResult {
+export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
 }
-export interface _CaffeineStorageRefillInformation {
+export interface _ImmutableObjectStorageRefillInformation {
   'proposed_top_up_amount' : [] | [bigint],
 }
-export interface _CaffeineStorageRefillResult {
+export interface _ImmutableObjectStorageRefillResult {
   'success' : [] | [boolean],
   'topped_up_amount' : [] | [bigint],
 }
 export interface _SERVICE {
-  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
-  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
-  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
+  '_immutableObjectStorageBlobsAreLive' : ActorMethod<
+    [Array<Uint8Array>],
+    Array<boolean>
+  >,
+  '_immutableObjectStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
+  '_immutableObjectStorageConfirmBlobDeletion' : ActorMethod<
     [Array<Uint8Array>],
     undefined
   >,
-  '_caffeineStorageCreateCertificate' : ActorMethod<
+  '_immutableObjectStorageCreateCertificate' : ActorMethod<
     [string],
-    _CaffeineStorageCreateCertificateResult
+    _ImmutableObjectStorageCreateCertificateResult
   >,
-  '_caffeineStorageRefillCashier' : ActorMethod<
-    [[] | [_CaffeineStorageRefillInformation]],
-    _CaffeineStorageRefillResult
+  '_immutableObjectStorageRefillCashier' : ActorMethod<
+    [[] | [_ImmutableObjectStorageRefillInformation]],
+    _ImmutableObjectStorageRefillResult
   >,
-  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  '_dummyUpdateLocation' : ActorMethod<[Location], undefined>,
+  '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
   'addCoffeeToCafe' : ActorMethod<[CafeId, Coffee], undefined>,
   'assignCafeOwner' : ActorMethod<[CafeId, Principal], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
@@ -153,17 +155,15 @@ export interface _SERVICE {
   'getCuppingsForUser' : ActorMethod<[Principal], Array<CuppingSubmission>>,
   'getDailyStats' : ActorMethod<[], Array<[string, DailyStats]>>,
   'getFilteredCafes' : ActorMethod<[number, string], Array<CafeProfile>>,
-  'getProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getQRCode' : ActorMethod<[QRCodeId], [] | [QRCodeData]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'initializeAccessControl' : ActorMethod<[], undefined>,
   'isAdmin' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'redeemQRCode' : ActorMethod<[QRCodeId], undefined>,
   'removeCoffeeFromCafe' : ActorMethod<[CafeId, CoffeeId], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'submitCuppingForm' : ActorMethod<
-    [QRCodeId, CoffeeScores, IntensityLevels, [] | [ExternalBlob]],
+    [QRCodeId, CoffeeScores, IntensityLevels],
     undefined
   >,
   'updateCafeFreeCups' : ActorMethod<[CafeId, bigint], undefined>,

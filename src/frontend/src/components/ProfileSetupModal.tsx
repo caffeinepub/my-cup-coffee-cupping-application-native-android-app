@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Level } from "../backend";
 import { useSaveCallerUserProfile } from "../hooks/useQueries";
+import type { Level } from "../types/backend-types";
 
 export default function ProfileSetupModal() {
   const [name, setName] = useState("");
@@ -29,7 +29,7 @@ export default function ProfileSetupModal() {
         name: name.trim(),
         completedCuppings: BigInt(0),
         accuracyPercentage: 0,
-        level: Level.novice,
+        level: { novice: null } as Level,
         progress: BigInt(0),
         cuppingHistory: {
           fragrance: BigInt(0),

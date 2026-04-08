@@ -93,14 +93,21 @@ export interface Location {
     latitude: number;
     longitude: number;
 }
-export interface _CaffeineStorageRefillResult {
-    success?: boolean;
-    topped_up_amount?: bigint;
+export interface CafeProfile {
+    id: CafeId;
+    averageScores: CoffeeScores;
+    owner: Principal;
+    name: string;
+    availableCoffees: Array<Coffee>;
+    availableFreeCups: bigint;
+    roastLevel: string;
+    location: Location;
 }
 export type Timestamp = bigint;
 export interface CoffeeScores {
     acidity: number;
     balance: number;
+    aroma: number;
     cleanCup: number;
     sweetness: number;
     flavor: number;
@@ -123,7 +130,7 @@ export interface Coffee {
     flavorProfile: string;
     roastLevel: string;
 }
-export interface _CaffeineStorageRefillInformation {
+export interface _ImmutableObjectStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
 export interface QRCodeData {
@@ -131,26 +138,14 @@ export interface QRCodeData {
     redemptionTimestamp?: Timestamp;
     cafe: CafeId;
     redeemed: boolean;
+    expiryTime: Timestamp;
     user: Principal;
-    timestamp: Timestamp;
     coffee: CoffeeId;
 }
-export interface CafeProfile {
-    id: CafeId;
-    averageScores: CoffeeScores;
-    owner: Principal;
-    name: string;
-    availableCoffees: Array<Coffee>;
-    availableFreeCups: bigint;
-    roastLevel: string;
-    location: Location;
-    photos: Array<ExternalBlob>;
-}
-export interface _CaffeineStorageCreateCertificateResult {
+export interface _ImmutableObjectStorageCreateCertificateResult {
     method: string;
     blob_hash: string;
 }
-export type CuppingId = string;
 export interface CuppingHistory {
     acidity: bigint;
     balance: bigint;
@@ -163,8 +158,13 @@ export interface CuppingHistory {
     uniformity: bigint;
     aftertaste: bigint;
 }
+export type CuppingId = string;
 export type CoffeeId = string;
 export type CafeId = string;
+export interface _ImmutableObjectStorageRefillResult {
+    success?: boolean;
+    topped_up_amount?: bigint;
+}
 export type QRCodeId = string;
 export interface CuppingSubmission {
     id: CuppingId;
@@ -173,8 +173,7 @@ export interface CuppingSubmission {
     user: Principal;
     timestamp: Timestamp;
     qrCodeId: QRCodeId;
-    photo?: ExternalBlob;
-    coffee: CoffeeId;
+    coffeeId: CoffeeId;
     intensityLevels: IntensityLevels;
 }
 export interface IntensityLevels {
@@ -192,6 +191,7 @@ export interface UserProfile {
     name: string;
     level: Level;
     progress: bigint;
+    phoneNumber?: string;
 }
 export enum Level {
     intermediate = "intermediate",
@@ -205,13 +205,13 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
-    _caffeineStorageBlobIsLive(hash: Uint8Array): Promise<boolean>;
-    _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
-    _caffeineStorageConfirmBlobDeletion(blobs: Array<Uint8Array>): Promise<void>;
-    _caffeineStorageCreateCertificate(blobHash: string): Promise<_CaffeineStorageCreateCertificateResult>;
-    _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
-    _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
-    _dummyUpdateLocation(location: Location): Promise<void>;
+    _immutableObjectStorageBlobsAreLive(hashes: Array<Uint8Array>): Promise<Array<boolean>>;
+    _immutableObjectStorageBlobsToDelete(): Promise<Array<Uint8Array>>;
+    _immutableObjectStorageConfirmBlobDeletion(blobs: Array<Uint8Array>): Promise<void>;
+    _immutableObjectStorageCreateCertificate(blobHash: string): Promise<_ImmutableObjectStorageCreateCertificateResult>;
+    _immutableObjectStorageRefillCashier(refillInformation: _ImmutableObjectStorageRefillInformation | null): Promise<_ImmutableObjectStorageRefillResult>;
+    _immutableObjectStorageUpdateGatewayPrincipals(): Promise<void>;
+    _initializeAccessControl(): Promise<void>;
     addCoffeeToCafe(cafeId: CafeId, coffee: Coffee): Promise<void>;
     assignCafeOwner(cafeId: CafeId, owner: Principal): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -225,117 +225,115 @@ export interface backendInterface {
     getCuppingsForCafe(cafeId: CafeId): Promise<Array<CuppingSubmission>>;
     getCuppingsForUser(user: Principal): Promise<Array<CuppingSubmission>>;
     getDailyStats(): Promise<Array<[string, DailyStats]>>;
-    getFilteredCafes(maxDistance: number, minRoastLevel: string): Promise<Array<CafeProfile>>;
-    getProfile(user: Principal): Promise<UserProfile | null>;
+    getFilteredCafes(_maxDistance: number, _minRoastLevel: string): Promise<Array<CafeProfile>>;
     getQRCode(qrCodeId: QRCodeId): Promise<QRCodeData | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    initializeAccessControl(): Promise<void>;
     isAdmin(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     redeemQRCode(qrCodeId: QRCodeId): Promise<void>;
     removeCoffeeFromCafe(cafeId: CafeId, coffeeId: CoffeeId): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitCuppingForm(qrCodeId: QRCodeId, scores: CoffeeScores, intensityLevels: IntensityLevels, photo: ExternalBlob | null): Promise<void>;
+    submitCuppingForm(qrCodeId: QRCodeId, scores: CoffeeScores, intensityLevels: IntensityLevels): Promise<void>;
     updateCafeFreeCups(cafeId: CafeId, availableFreeCups: bigint): Promise<void>;
 }
-import type { CafeId as _CafeId, CafeProfile as _CafeProfile, Coffee as _Coffee, CoffeeId as _CoffeeId, CoffeeScores as _CoffeeScores, CuppingHistory as _CuppingHistory, CuppingId as _CuppingId, CuppingSubmission as _CuppingSubmission, ExternalBlob as _ExternalBlob, IntensityLevels as _IntensityLevels, Level as _Level, Location as _Location, QRCodeData as _QRCodeData, QRCodeId as _QRCodeId, Timestamp as _Timestamp, UserProfile as _UserProfile, UserRole as _UserRole, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { CafeId as _CafeId, CafeProfile as _CafeProfile, CoffeeId as _CoffeeId, CuppingHistory as _CuppingHistory, Level as _Level, QRCodeData as _QRCodeData, QRCodeId as _QRCodeId, Timestamp as _Timestamp, UserProfile as _UserProfile, UserRole as _UserRole, _ImmutableObjectStorageRefillInformation as __ImmutableObjectStorageRefillInformation, _ImmutableObjectStorageRefillResult as __ImmutableObjectStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
-    async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
+    async _immutableObjectStorageBlobsAreLive(arg0: Array<Uint8Array>): Promise<Array<boolean>> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+                const result = await this.actor._immutableObjectStorageBlobsAreLive(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageBlobIsLive(arg0);
+            const result = await this.actor._immutableObjectStorageBlobsAreLive(arg0);
             return result;
         }
     }
-    async _caffeineStorageBlobsToDelete(): Promise<Array<Uint8Array>> {
+    async _immutableObjectStorageBlobsToDelete(): Promise<Array<Uint8Array>> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageBlobsToDelete();
+                const result = await this.actor._immutableObjectStorageBlobsToDelete();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageBlobsToDelete();
+            const result = await this.actor._immutableObjectStorageBlobsToDelete();
             return result;
         }
     }
-    async _caffeineStorageConfirmBlobDeletion(arg0: Array<Uint8Array>): Promise<void> {
+    async _immutableObjectStorageConfirmBlobDeletion(arg0: Array<Uint8Array>): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+                const result = await this.actor._immutableObjectStorageConfirmBlobDeletion(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageConfirmBlobDeletion(arg0);
+            const result = await this.actor._immutableObjectStorageConfirmBlobDeletion(arg0);
             return result;
         }
     }
-    async _caffeineStorageCreateCertificate(arg0: string): Promise<_CaffeineStorageCreateCertificateResult> {
+    async _immutableObjectStorageCreateCertificate(arg0: string): Promise<_ImmutableObjectStorageCreateCertificateResult> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+                const result = await this.actor._immutableObjectStorageCreateCertificate(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageCreateCertificate(arg0);
+            const result = await this.actor._immutableObjectStorageCreateCertificate(arg0);
             return result;
         }
     }
-    async _caffeineStorageRefillCashier(arg0: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult> {
+    async _immutableObjectStorageRefillCashier(arg0: _ImmutableObjectStorageRefillInformation | null): Promise<_ImmutableObjectStorageRefillResult> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
-                return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+                const result = await this.actor._immutableObjectStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+                return from_candid__ImmutableObjectStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
-            return from_candid__CaffeineStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
+            const result = await this.actor._immutableObjectStorageRefillCashier(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+            return from_candid__ImmutableObjectStorageRefillResult_n4(this._uploadFile, this._downloadFile, result);
         }
     }
-    async _caffeineStorageUpdateGatewayPrincipals(): Promise<void> {
+    async _immutableObjectStorageUpdateGatewayPrincipals(): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+                const result = await this.actor._immutableObjectStorageUpdateGatewayPrincipals();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
+            const result = await this.actor._immutableObjectStorageUpdateGatewayPrincipals();
             return result;
         }
     }
-    async _dummyUpdateLocation(arg0: Location): Promise<void> {
+    async _initializeAccessControl(): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor._dummyUpdateLocation(arg0);
+                const result = await this.actor._initializeAccessControl();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._dummyUpdateLocation(arg0);
+            const result = await this.actor._initializeAccessControl();
             return result;
         }
     }
@@ -385,14 +383,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.createCafeProfile(arg0, arg1, arg2, arg3, arg4, arg5);
-                return from_candid_CafeProfile_n10(this._uploadFile, this._downloadFile, result);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.createCafeProfile(arg0, arg1, arg2, arg3, arg4, arg5);
-            return from_candid_CafeProfile_n10(this._uploadFile, this._downloadFile, result);
+            return result;
         }
     }
     async exportCafeData(arg0: CafeId): Promise<string> {
@@ -413,98 +411,98 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.generateQRCode(arg0, arg1);
-                return from_candid_QRCodeData_n14(this._uploadFile, this._downloadFile, result);
+                return from_candid_QRCodeData_n10(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.generateQRCode(arg0, arg1);
-            return from_candid_QRCodeData_n14(this._uploadFile, this._downloadFile, result);
+            return from_candid_QRCodeData_n10(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCafeForOwner(): Promise<CafeProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCafeForOwner();
-                return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCafeForOwner();
-            return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCafeProfile(arg0: CafeId): Promise<CafeProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCafeProfile(arg0);
-                return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCafeProfile(arg0);
-            return from_candid_opt_n17(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n13(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n23(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n20(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n23(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n20(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCuppingsForCafe(arg0: CafeId): Promise<Array<CuppingSubmission>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCuppingsForCafe(arg0);
-                return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCuppingsForCafe(arg0);
-            return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+            return result;
         }
     }
     async getCuppingsForUser(arg0: Principal): Promise<Array<CuppingSubmission>> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCuppingsForUser(arg0);
-                return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+                return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCuppingsForUser(arg0);
-            return from_candid_vec_n25(this._uploadFile, this._downloadFile, result);
+            return result;
         }
     }
     async getDailyStats(): Promise<Array<[string, DailyStats]>> {
@@ -525,70 +523,42 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.getFilteredCafes(arg0, arg1);
-                return from_candid_vec_n29(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getFilteredCafes(arg0, arg1);
-            return from_candid_vec_n29(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getProfile(arg0: Principal): Promise<UserProfile | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getProfile(arg0);
-                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getProfile(arg0);
-            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getQRCode(arg0: QRCodeId): Promise<QRCodeData | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getQRCode(arg0);
-                return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getQRCode(arg0);
-            return from_candid_opt_n30(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n18(this._uploadFile, this._downloadFile, result);
-        }
-    }
-    async initializeAccessControl(): Promise<void> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.initializeAccessControl();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.initializeAccessControl();
+            const result = await this.actor.getFilteredCafes(arg0, arg1);
             return result;
+        }
+    }
+    async getQRCode(arg0: QRCodeId): Promise<QRCodeData | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getQRCode(arg0);
+                return from_candid_opt_n22(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getQRCode(arg0);
+            return from_candid_opt_n22(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getUserProfile(arg0);
+                return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getUserProfile(arg0);
+            return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
         }
     }
     async isAdmin(): Promise<boolean> {
@@ -650,28 +620,28 @@ export class Backend implements backendInterface {
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n31(this._uploadFile, this._downloadFile, arg0));
+                const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n23(this._uploadFile, this._downloadFile, arg0));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n31(this._uploadFile, this._downloadFile, arg0));
+            const result = await this.actor.saveCallerUserProfile(to_candid_UserProfile_n23(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
-    async submitCuppingForm(arg0: QRCodeId, arg1: CoffeeScores, arg2: IntensityLevels, arg3: ExternalBlob | null): Promise<void> {
+    async submitCuppingForm(arg0: QRCodeId, arg1: CoffeeScores, arg2: IntensityLevels): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.submitCuppingForm(arg0, arg1, arg2, await to_candid_opt_n35(this._uploadFile, this._downloadFile, arg3));
+                const result = await this.actor.submitCuppingForm(arg0, arg1, arg2);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.submitCuppingForm(arg0, arg1, arg2, await to_candid_opt_n35(this._uploadFile, this._downloadFile, arg3));
+            const result = await this.actor.submitCuppingForm(arg0, arg1, arg2);
             return result;
         }
     }
@@ -690,44 +660,35 @@ export class Backend implements backendInterface {
         }
     }
 }
-async function from_candid_CafeProfile_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CafeProfile): Promise<CafeProfile> {
-    return await from_candid_record_n11(_uploadFile, _downloadFile, value);
+function from_candid_Level_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Level): Level {
+    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
 }
-async function from_candid_CuppingSubmission_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CuppingSubmission): Promise<CuppingSubmission> {
-    return await from_candid_record_n27(_uploadFile, _downloadFile, value);
+function from_candid_QRCodeData_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _QRCodeData): QRCodeData {
+    return from_candid_record_n11(_uploadFile, _downloadFile, value);
 }
-async function from_candid_ExternalBlob_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ExternalBlob): Promise<ExternalBlob> {
-    return await _downloadFile(value);
+function from_candid_UserProfile_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
+    return from_candid_record_n16(_uploadFile, _downloadFile, value);
 }
-function from_candid_Level_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Level): Level {
-    return from_candid_variant_n22(_uploadFile, _downloadFile, value);
+function from_candid_UserRole_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n21(_uploadFile, _downloadFile, value);
 }
-function from_candid_QRCodeData_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _QRCodeData): QRCodeData {
-    return from_candid_record_n15(_uploadFile, _downloadFile, value);
-}
-function from_candid_UserProfile_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserProfile): UserProfile {
-    return from_candid_record_n20(_uploadFile, _downloadFile, value);
-}
-function from_candid_UserRole_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n24(_uploadFile, _downloadFile, value);
-}
-function from_candid__CaffeineStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __CaffeineStorageRefillResult): _CaffeineStorageRefillResult {
+function from_candid__ImmutableObjectStorageRefillResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: __ImmutableObjectStorageRefillResult): _ImmutableObjectStorageRefillResult {
     return from_candid_record_n5(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Timestamp]): Timestamp | null {
+function from_candid_opt_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_Timestamp]): Timestamp | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_opt_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_CafeProfile]): Promise<CafeProfile | null> {
-    return value.length === 0 ? null : await from_candid_CafeProfile_n10(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_CafeProfile]): CafeProfile | null {
+    return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
-    return value.length === 0 ? null : from_candid_UserProfile_n19(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : from_candid_UserProfile_n15(_uploadFile, _downloadFile, value[0]);
 }
-async function from_candid_opt_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ExternalBlob]): Promise<ExternalBlob | null> {
-    return value.length === 0 ? null : await from_candid_ExternalBlob_n13(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+    return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_QRCodeData]): QRCodeData | null {
-    return value.length === 0 ? null : from_candid_QRCodeData_n14(_uploadFile, _downloadFile, value[0]);
+function from_candid_opt_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_QRCodeData]): QRCodeData | null {
+    return value.length === 0 ? null : from_candid_QRCodeData_n10(_uploadFile, _downloadFile, value[0]);
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
     return value.length === 0 ? null : value[0];
@@ -735,73 +696,41 @@ function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Ar
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-async function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _CafeId;
-    averageScores: _CoffeeScores;
-    owner: Principal;
-    name: string;
-    availableCoffees: Array<_Coffee>;
-    availableFreeCups: bigint;
-    roastLevel: string;
-    location: _Location;
-    photos: Array<_ExternalBlob>;
-}): Promise<{
-    id: CafeId;
-    averageScores: CoffeeScores;
-    owner: Principal;
-    name: string;
-    availableCoffees: Array<Coffee>;
-    availableFreeCups: bigint;
-    roastLevel: string;
-    location: Location;
-    photos: Array<ExternalBlob>;
-}> {
-    return {
-        id: value.id,
-        averageScores: value.averageScores,
-        owner: value.owner,
-        name: value.name,
-        availableCoffees: value.availableCoffees,
-        availableFreeCups: value.availableFreeCups,
-        roastLevel: value.roastLevel,
-        location: value.location,
-        photos: await from_candid_vec_n12(_uploadFile, _downloadFile, value.photos)
-    };
-}
-function from_candid_record_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     id: _QRCodeId;
     redemptionTimestamp: [] | [_Timestamp];
     cafe: _CafeId;
     redeemed: boolean;
+    expiryTime: _Timestamp;
     user: Principal;
-    timestamp: _Timestamp;
     coffee: _CoffeeId;
 }): {
     id: QRCodeId;
     redemptionTimestamp?: Timestamp;
     cafe: CafeId;
     redeemed: boolean;
+    expiryTime: Timestamp;
     user: Principal;
-    timestamp: Timestamp;
     coffee: CoffeeId;
 } {
     return {
         id: value.id,
-        redemptionTimestamp: record_opt_to_undefined(from_candid_opt_n16(_uploadFile, _downloadFile, value.redemptionTimestamp)),
+        redemptionTimestamp: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.redemptionTimestamp)),
         cafe: value.cafe,
         redeemed: value.redeemed,
+        expiryTime: value.expiryTime,
         user: value.user,
-        timestamp: value.timestamp,
         coffee: value.coffee
     };
 }
-function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     cuppingHistory: _CuppingHistory;
     accuracyPercentage: number;
     completedCuppings: bigint;
     name: string;
     level: _Level;
     progress: bigint;
+    phoneNumber: [] | [string];
 }): {
     cuppingHistory: CuppingHistory;
     accuracyPercentage: number;
@@ -809,47 +738,16 @@ function from_candid_record_n20(_uploadFile: (file: ExternalBlob) => Promise<Uin
     name: string;
     level: Level;
     progress: bigint;
+    phoneNumber?: string;
 } {
     return {
         cuppingHistory: value.cuppingHistory,
         accuracyPercentage: value.accuracyPercentage,
         completedCuppings: value.completedCuppings,
         name: value.name,
-        level: from_candid_Level_n21(_uploadFile, _downloadFile, value.level),
-        progress: value.progress
-    };
-}
-async function from_candid_record_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    id: _CuppingId;
-    cafe: _CafeId;
-    scores: _CoffeeScores;
-    user: Principal;
-    timestamp: _Timestamp;
-    qrCodeId: _QRCodeId;
-    photo: [] | [_ExternalBlob];
-    coffee: _CoffeeId;
-    intensityLevels: _IntensityLevels;
-}): Promise<{
-    id: CuppingId;
-    cafe: CafeId;
-    scores: CoffeeScores;
-    user: Principal;
-    timestamp: Timestamp;
-    qrCodeId: QRCodeId;
-    photo?: ExternalBlob;
-    coffee: CoffeeId;
-    intensityLevels: IntensityLevels;
-}> {
-    return {
-        id: value.id,
-        cafe: value.cafe,
-        scores: value.scores,
-        user: value.user,
-        timestamp: value.timestamp,
-        qrCodeId: value.qrCodeId,
-        photo: record_opt_to_undefined(await from_candid_opt_n28(_uploadFile, _downloadFile, value.photo)),
-        coffee: value.coffee,
-        intensityLevels: value.intensityLevels
+        level: from_candid_Level_n17(_uploadFile, _downloadFile, value.level),
+        progress: value.progress,
+        phoneNumber: record_opt_to_undefined(from_candid_opt_n19(_uploadFile, _downloadFile, value.phoneNumber))
     };
 }
 function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -864,7 +762,7 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
-function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     intermediate: null;
 } | {
     novice: null;
@@ -875,7 +773,7 @@ function from_candid_variant_n22(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): Level {
     return "intermediate" in value ? Level.intermediate : "novice" in value ? Level.novice : "advanced" in value ? Level.advanced : "expert" in value ? Level.expert : value;
 }
-function from_candid_variant_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -884,35 +782,47 @@ function from_candid_variant_n24(_uploadFile: (file: ExternalBlob) => Promise<Ui
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-async function from_candid_vec_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_ExternalBlob>): Promise<Array<ExternalBlob>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_ExternalBlob_n13(_uploadFile, _downloadFile, x)));
+function to_candid_Level_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Level): _Level {
+    return to_candid_variant_n26(_uploadFile, _downloadFile, value);
 }
-async function from_candid_vec_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CuppingSubmission>): Promise<Array<CuppingSubmission>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_CuppingSubmission_n26(_uploadFile, _downloadFile, x)));
-}
-async function from_candid_vec_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CafeProfile>): Promise<Array<CafeProfile>> {
-    return await Promise.all(value.map(async (x)=>await from_candid_CafeProfile_n10(_uploadFile, _downloadFile, x)));
-}
-async function to_candid_ExternalBlob_n36(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob): Promise<_ExternalBlob> {
-    return await _uploadFile(value);
-}
-function to_candid_Level_n33(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Level): _Level {
-    return to_candid_variant_n34(_uploadFile, _downloadFile, value);
-}
-function to_candid_UserProfile_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
-    return to_candid_record_n32(_uploadFile, _downloadFile, value);
+function to_candid_UserProfile_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserProfile): _UserProfile {
+    return to_candid_record_n24(_uploadFile, _downloadFile, value);
 }
 function to_candid_UserRole_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
     return to_candid_variant_n9(_uploadFile, _downloadFile, value);
 }
-function to_candid__CaffeineStorageRefillInformation_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation): __CaffeineStorageRefillInformation {
+function to_candid__ImmutableObjectStorageRefillInformation_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ImmutableObjectStorageRefillInformation): __ImmutableObjectStorageRefillInformation {
     return to_candid_record_n3(_uploadFile, _downloadFile, value);
 }
-function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CaffeineStorageRefillInformation | null): [] | [__CaffeineStorageRefillInformation] {
-    return value === null ? candid_none() : candid_some(to_candid__CaffeineStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
+function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ImmutableObjectStorageRefillInformation | null): [] | [__ImmutableObjectStorageRefillInformation] {
+    return value === null ? candid_none() : candid_some(to_candid__ImmutableObjectStorageRefillInformation_n2(_uploadFile, _downloadFile, value));
 }
-async function to_candid_opt_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ExternalBlob | null): Promise<[] | [_ExternalBlob]> {
-    return value === null ? candid_none() : candid_some(await to_candid_ExternalBlob_n36(_uploadFile, _downloadFile, value));
+function to_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    cuppingHistory: CuppingHistory;
+    accuracyPercentage: number;
+    completedCuppings: bigint;
+    name: string;
+    level: Level;
+    progress: bigint;
+    phoneNumber?: string;
+}): {
+    cuppingHistory: _CuppingHistory;
+    accuracyPercentage: number;
+    completedCuppings: bigint;
+    name: string;
+    level: _Level;
+    progress: bigint;
+    phoneNumber: [] | [string];
+} {
+    return {
+        cuppingHistory: value.cuppingHistory,
+        accuracyPercentage: value.accuracyPercentage,
+        completedCuppings: value.completedCuppings,
+        name: value.name,
+        level: to_candid_Level_n25(_uploadFile, _downloadFile, value.level),
+        progress: value.progress,
+        phoneNumber: value.phoneNumber ? candid_some(value.phoneNumber) : candid_none()
+    };
 }
 function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     proposed_top_up_amount?: bigint;
@@ -923,31 +833,7 @@ function to_candid_record_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
         proposed_top_up_amount: value.proposed_top_up_amount ? candid_some(value.proposed_top_up_amount) : candid_none()
     };
 }
-function to_candid_record_n32(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    cuppingHistory: CuppingHistory;
-    accuracyPercentage: number;
-    completedCuppings: bigint;
-    name: string;
-    level: Level;
-    progress: bigint;
-}): {
-    cuppingHistory: _CuppingHistory;
-    accuracyPercentage: number;
-    completedCuppings: bigint;
-    name: string;
-    level: _Level;
-    progress: bigint;
-} {
-    return {
-        cuppingHistory: value.cuppingHistory,
-        accuracyPercentage: value.accuracyPercentage,
-        completedCuppings: value.completedCuppings,
-        name: value.name,
-        level: to_candid_Level_n33(_uploadFile, _downloadFile, value.level),
-        progress: value.progress
-    };
-}
-function to_candid_variant_n34(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Level): {
+function to_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Level): {
     intermediate: null;
 } | {
     novice: null;

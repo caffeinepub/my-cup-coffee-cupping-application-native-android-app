@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Lock, Trophy, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Level } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetCallerUserProfile,
   useGetCuppingsForUser,
 } from "../hooks/useQueries";
+import type { Level } from "../types/backend-types";
+import { getLevelLabel } from "../types/backend-types";
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -43,45 +44,38 @@ function getLevelDisplay(level: Level): {
   colorClass: string;
   ringClass: string;
 } {
-  switch (level) {
-    case Level.novice:
-      return {
-        label: "Novice",
-        colorClass: "bg-muted text-muted-foreground",
-        ringClass: "border-muted-foreground/40",
-      };
-    case Level.intermediate:
-      return {
-        label: "Intermediate",
-        colorClass: "bg-chart-2/20 text-chart-2",
-        ringClass: "border-chart-2",
-      };
-    case Level.advanced:
-      return {
-        label: "Advanced",
-        colorClass: "bg-primary/20 text-primary",
-        ringClass: "border-primary",
-      };
-    case Level.expert:
-      return {
-        label: "Expert",
-        colorClass: "bg-chart-4/20 text-chart-4",
-        ringClass: "border-chart-4",
-      };
-  }
+  const label = getLevelLabel(level);
+  if (label === "Novice")
+    return {
+      label: "Novice",
+      colorClass: "bg-muted text-muted-foreground",
+      ringClass: "border-muted-foreground/40",
+    };
+  if (label === "Intermediate")
+    return {
+      label: "Intermediate",
+      colorClass: "bg-chart-2/20 text-chart-2",
+      ringClass: "border-chart-2",
+    };
+  if (label === "Advanced")
+    return {
+      label: "Advanced",
+      colorClass: "bg-primary/20 text-primary",
+      ringClass: "border-primary",
+    };
+  return {
+    label: "Expert",
+    colorClass: "bg-chart-4/20 text-chart-4",
+    ringClass: "border-chart-4",
+  };
 }
 
 function getNextLevelThreshold(level: Level): number | null {
-  switch (level) {
-    case Level.novice:
-      return 10;
-    case Level.intermediate:
-      return 25;
-    case Level.advanced:
-      return 50;
-    case Level.expert:
-      return null;
-  }
+  const label = getLevelLabel(level);
+  if (label === "Novice") return 10;
+  if (label === "Intermediate") return 25;
+  if (label === "Advanced") return 50;
+  return null;
 }
 
 function timeAgo(timestampNano: bigint): string {
@@ -149,6 +143,7 @@ export default function GamificationDashboard() {
   const completedCuppings = Number(profile.completedCuppings);
   const accuracy = profile.accuracyPercentage;
   const level = profile.level;
+  const levelLabel = getLevelLabel(level);
   const xp = completedCuppings * 100 + Math.round(accuracy);
 
   const levelDisplay = getLevelDisplay(level);
@@ -188,15 +183,15 @@ export default function GamificationDashboard() {
       icon: "⭐",
       name: "Intermediate",
       earned:
-        level === Level.intermediate ||
-        level === Level.advanced ||
-        level === Level.expert,
+        levelLabel === "Intermediate" ||
+        levelLabel === "Advanced" ||
+        levelLabel === "Expert",
     },
     {
       id: 6,
       icon: "🏆",
       name: "Advanced",
-      earned: level === Level.advanced || level === Level.expert,
+      earned: levelLabel === "Advanced" || levelLabel === "Expert",
     },
     {
       id: 7,
@@ -220,7 +215,7 @@ export default function GamificationDashboard() {
       id: 10,
       icon: "👑",
       name: "Expert Taster",
-      earned: level === Level.expert,
+      earned: levelLabel === "Expert",
     },
     {
       id: 11,
@@ -232,7 +227,7 @@ export default function GamificationDashboard() {
       id: 12,
       icon: "🌟",
       name: "My Cup Legend",
-      earned: level === Level.expert && accuracy >= 90,
+      earned: levelLabel === "Expert" && accuracy >= 90,
     },
   ];
 
@@ -334,7 +329,7 @@ export default function GamificationDashboard() {
       ? cuppings.slice(0, 5).map((c, i) => ({
           id: i,
           icon: "☕",
-          text: `You submitted a cupping review — Coffee: ${c.coffee}`,
+          text: `You submitted a cupping review — Coffee: ${c.coffeeId}`,
           time: timeAgo(c.timestamp),
           borderColor: "border-primary",
         }))

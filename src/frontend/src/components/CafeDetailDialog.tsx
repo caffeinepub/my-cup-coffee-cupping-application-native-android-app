@@ -12,8 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Coffee, MapPin } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { CafeProfile, Coffee as CoffeeType } from "../backend";
 import { useGenerateQRCode } from "../hooks/useQueries";
+import type { CafeProfile, Coffee as CoffeeType } from "../types/backend-types";
 
 interface CafeDetailDialogProps {
   cafe: CafeProfile;

@@ -12,18 +12,16 @@ import { Slider } from "@/components/ui/slider";
 import { Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  type CoffeeScores,
-  ExternalBlob,
-  type IntensityLevels,
-} from "../backend";
+import { ExternalBlob } from "../backend";
 import {
   useGetCuppingsForUser,
   useSubmitCuppingForm,
 } from "../hooks/useQueries";
+import type { CoffeeScores, IntensityLevels } from "../types/backend-types";
 
 const categories = [
-  { key: "fragrance", label: "Fragrance/Aroma", hasIntensity: true },
+  { key: "fragrance", label: "Fragrance", hasIntensity: true },
+  { key: "aroma", label: "Aroma", hasIntensity: false },
   { key: "flavor", label: "Flavor", hasIntensity: true },
   { key: "aftertaste", label: "Aftertaste", hasIntensity: true },
   { key: "acidity", label: "Acidity", hasIntensity: true },
@@ -39,6 +37,7 @@ export default function CuppingForm() {
   const [qrCodeId, setQrCodeId] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({
     fragrance: 50,
+    aroma: 50,
     flavor: 50,
     aftertaste: 50,
     acidity: 50,
@@ -102,6 +101,7 @@ export default function CuppingForm() {
 
       const cuppingScores: CoffeeScores = {
         fragrance: scores.fragrance,
+        aroma: scores.aroma,
         flavor: scores.flavor,
         aftertaste: scores.aftertaste,
         acidity: scores.acidity,

@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Level } from "../backend";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetCallerUserProfile,
   useGetCuppingsForUser,
 } from "../hooks/useQueries";
+import { Level, getLevelLabel } from "../types/backend-types";
 import CuppingRadarChart from "./CuppingRadarChart";
 
 interface UserProfileProps {
@@ -58,18 +58,18 @@ export default function UserProfile({ onViewGamification }: UserProfileProps) {
     return null;
   }
 
-  const levelInfo = {
-    [Level.novice]: { name: "Novice", color: "bg-blue-500", next: 10 },
-    [Level.intermediate]: {
-      name: "Intermediate",
-      color: "bg-green-500",
-      next: 25,
-    },
-    [Level.advanced]: { name: "Advanced", color: "bg-purple-500", next: 50 },
-    [Level.expert]: { name: "Expert", color: "bg-amber-500", next: null },
+  const levelLabel = getLevelLabel(profile.level);
+  const levelColorMap: Record<string, { color: string; next: number | null }> =
+    {
+      Novice: { color: "bg-blue-500", next: 10 },
+      Intermediate: { color: "bg-green-500", next: 25 },
+      Advanced: { color: "bg-purple-500", next: 50 },
+      Expert: { color: "bg-amber-500", next: null },
+    };
+  const currentLevel = levelColorMap[levelLabel] ?? {
+    color: "bg-muted",
+    next: null,
   };
-
-  const currentLevel = levelInfo[profile.level];
   const progressPercentage = currentLevel.next
     ? (Number(profile.completedCuppings) / currentLevel.next) * 100
     : 100;
@@ -153,10 +153,8 @@ export default function UserProfile({ onViewGamification }: UserProfileProps) {
             <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{currentLevel.name}</div>
-            <Badge className={`mt-2 ${currentLevel.color}`}>
-              {profile.level}
-            </Badge>
+            <div className="text-2xl font-bold">{levelLabel}</div>
+            <Badge className={`mt-2 ${currentLevel.color}`}>{levelLabel}</Badge>
           </CardContent>
         </Card>
 
@@ -236,7 +234,7 @@ export default function UserProfile({ onViewGamification }: UserProfileProps) {
           <CardContent>
             <CuppingRadarChart
               scores={lastCupping.scores}
-              title={`Coffee: ${lastCupping.coffee}`}
+              title={`Coffee: ${lastCupping.coffeeId}`}
             />
             <div className="mt-4 text-center text-sm text-muted-foreground">
               Submitted on{" "}
@@ -264,7 +262,7 @@ export default function UserProfile({ onViewGamification }: UserProfileProps) {
                   className="flex items-center justify-between border-b pb-3 last:border-0"
                 >
                   <div>
-                    <p className="font-medium">Coffee: {cupping.coffee}</p>
+                    <p className="font-medium">Coffee: {cupping.coffeeId}</p>
                     <p className="text-sm text-muted-foreground">
                       Overall Score: {cupping.scores.overall.toFixed(1)}
                     </p>

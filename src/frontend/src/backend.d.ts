@@ -7,21 +7,25 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export class ExternalBlob {
-    getBytes(): Promise<Uint8Array<ArrayBuffer>>;
-    getDirectURL(): string;
-    static fromURL(url: string): ExternalBlob;
-    static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
-    withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
-}
 export interface Location {
     latitude: number;
     longitude: number;
+}
+export interface CafeProfile {
+    id: CafeId;
+    averageScores: CoffeeScores;
+    owner: Principal;
+    name: string;
+    availableCoffees: Array<Coffee>;
+    availableFreeCups: bigint;
+    roastLevel: string;
+    location: Location;
 }
 export type Timestamp = bigint;
 export interface CoffeeScores {
     acidity: number;
     balance: number;
+    aroma: number;
     cleanCup: number;
     sweetness: number;
     flavor: number;
@@ -49,22 +53,10 @@ export interface QRCodeData {
     redemptionTimestamp?: Timestamp;
     cafe: CafeId;
     redeemed: boolean;
+    expiryTime: Timestamp;
     user: Principal;
-    timestamp: Timestamp;
     coffee: CoffeeId;
 }
-export interface CafeProfile {
-    id: CafeId;
-    averageScores: CoffeeScores;
-    owner: Principal;
-    name: string;
-    availableCoffees: Array<Coffee>;
-    availableFreeCups: bigint;
-    roastLevel: string;
-    location: Location;
-    photos: Array<ExternalBlob>;
-}
-export type CuppingId = string;
 export interface CuppingHistory {
     acidity: bigint;
     balance: bigint;
@@ -77,6 +69,7 @@ export interface CuppingHistory {
     uniformity: bigint;
     aftertaste: bigint;
 }
+export type CuppingId = string;
 export type CoffeeId = string;
 export type CafeId = string;
 export type QRCodeId = string;
@@ -87,8 +80,7 @@ export interface CuppingSubmission {
     user: Principal;
     timestamp: Timestamp;
     qrCodeId: QRCodeId;
-    photo?: ExternalBlob;
-    coffee: CoffeeId;
+    coffeeId: CoffeeId;
     intensityLevels: IntensityLevels;
 }
 export interface IntensityLevels {
@@ -106,6 +98,7 @@ export interface UserProfile {
     name: string;
     level: Level;
     progress: bigint;
+    phoneNumber?: string;
 }
 export enum Level {
     intermediate = "intermediate",
@@ -132,16 +125,14 @@ export interface backendInterface {
     getCuppingsForCafe(cafeId: CafeId): Promise<Array<CuppingSubmission>>;
     getCuppingsForUser(user: Principal): Promise<Array<CuppingSubmission>>;
     getDailyStats(): Promise<Array<[string, DailyStats]>>;
-    getFilteredCafes(maxDistance: number, minRoastLevel: string): Promise<Array<CafeProfile>>;
-    getProfile(user: Principal): Promise<UserProfile | null>;
+    getFilteredCafes(_maxDistance: number, _minRoastLevel: string): Promise<Array<CafeProfile>>;
     getQRCode(qrCodeId: QRCodeId): Promise<QRCodeData | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    initializeAccessControl(): Promise<void>;
     isAdmin(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     redeemQRCode(qrCodeId: QRCodeId): Promise<void>;
     removeCoffeeFromCafe(cafeId: CafeId, coffeeId: CoffeeId): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    submitCuppingForm(qrCodeId: QRCodeId, scores: CoffeeScores, intensityLevels: IntensityLevels, photo: ExternalBlob | null): Promise<void>;
+    submitCuppingForm(qrCodeId: QRCodeId, scores: CoffeeScores, intensityLevels: IntensityLevels): Promise<void>;
     updateCafeFreeCups(cafeId: CafeId, availableFreeCups: bigint): Promise<void>;
 }

@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ExternalBlob } from "../backend";
 import type {
   CafeId,
   CafeProfile,
@@ -12,20 +14,20 @@ import type {
   QRCodeData,
   QRCodeId,
   UserProfile,
-} from "../backend";
-import type { ExternalBlob } from "../backend";
+} from "../types/backend-types";
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 // User Profile Queries
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
+  const a = actor as any;
 
   const query = useQuery<UserProfile | null>({
     queryKey: ["currentUserProfile"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.getCallerUserProfile();
+      if (!a) throw new Error("Actor not available");
+      return a.getCallerUserProfile();
     },
     enabled: !!actor && !actorFetching,
     retry: false,
@@ -45,7 +47,7 @@ export function useSaveCallerUserProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.saveCallerUserProfile(profile);
+      return (actor as any).saveCallerUserProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
@@ -61,7 +63,7 @@ export function useGetFilteredCafes() {
     queryKey: ["cafes"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getFilteredCafes(1000, "");
+      return (actor as any).getFilteredCafes(1000, "");
     },
     enabled: !!actor && !isFetching,
   });
@@ -74,7 +76,7 @@ export function useGetCafeProfile(cafeId: CafeId | null) {
     queryKey: ["cafe", cafeId],
     queryFn: async () => {
       if (!actor || !cafeId) return null;
-      return actor.getCafeProfile(cafeId);
+      return (actor as any).getCafeProfile(cafeId);
     },
     enabled: !!actor && !isFetching && !!cafeId,
   });
@@ -88,7 +90,7 @@ export function useGetCafeForOwner() {
     queryKey: ["ownerCafe"],
     queryFn: async () => {
       if (!actor) return null;
-      return actor.getCafeForOwner();
+      return (actor as any).getCafeForOwner();
     },
     enabled: !!actor && !isFetching && !!identity,
   });
@@ -108,7 +110,7 @@ export function useCreateCafeProfile() {
       availableFreeCups: bigint;
     }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.createCafeProfile(
+      return (actor as any).createCafeProfile(
         params.owner,
         params.name,
         params.latitude,
@@ -134,7 +136,10 @@ export function useUpdateCafeFreeCups() {
       availableFreeCups: bigint;
     }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.updateCafeFreeCups(params.cafeId, params.availableFreeCups);
+      return (actor as any).updateCafeFreeCups(
+        params.cafeId,
+        params.availableFreeCups,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cafes"] });
@@ -150,7 +155,7 @@ export function useAddCoffeeToCafe() {
   return useMutation({
     mutationFn: async (params: { cafeId: CafeId; coffee: Coffee }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.addCoffeeToCafe(params.cafeId, params.coffee);
+      return (actor as any).addCoffeeToCafe(params.cafeId, params.coffee);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cafes"] });
@@ -166,7 +171,10 @@ export function useRemoveCoffeeFromCafe() {
   return useMutation({
     mutationFn: async (params: { cafeId: CafeId; coffeeId: CoffeeId }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.removeCoffeeFromCafe(params.cafeId, params.coffeeId);
+      return (actor as any).removeCoffeeFromCafe(
+        params.cafeId,
+        params.coffeeId,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cafes"] });
@@ -183,7 +191,10 @@ export function useGenerateQRCode() {
   return useMutation({
     mutationFn: async (params: { cafeId: CafeId; coffeeId: CoffeeId }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.generateQRCode(params.cafeId, params.coffeeId);
+      return (actor as any).generateQRCode(
+        params.cafeId,
+        params.coffeeId,
+      ) as Promise<QRCodeData>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["qrCodes"] });
@@ -198,7 +209,7 @@ export function useRedeemQRCode() {
   return useMutation({
     mutationFn: async (qrCodeId: QRCodeId) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.redeemQRCode(qrCodeId);
+      return (actor as any).redeemQRCode(qrCodeId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cafes"] });
@@ -214,7 +225,7 @@ export function useGetQRCode(qrCodeId: QRCodeId | null) {
     queryKey: ["qrCode", qrCodeId],
     queryFn: async () => {
       if (!actor || !qrCodeId) return null;
-      return actor.getQRCode(qrCodeId);
+      return (actor as any).getQRCode(qrCodeId);
     },
     enabled: !!actor && !isFetching && !!qrCodeId,
   });
@@ -233,7 +244,7 @@ export function useSubmitCuppingForm() {
       photo: ExternalBlob | null;
     }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.submitCuppingForm(
+      return (actor as any).submitCuppingForm(
         params.qrCodeId,
         params.scores,
         params.intensityLevels,
@@ -255,7 +266,7 @@ export function useGetCuppingsForUser() {
     queryKey: ["cuppings", identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor || !identity) return [];
-      return actor.getCuppingsForUser(identity.getPrincipal());
+      return (actor as any).getCuppingsForUser(identity.getPrincipal());
     },
     enabled: !!actor && !isFetching && !!identity,
   });
@@ -268,7 +279,7 @@ export function useGetCuppingsForCafe(cafeId: CafeId | null) {
     queryKey: ["cafeCuppings", cafeId],
     queryFn: async () => {
       if (!actor || !cafeId) return [];
-      return actor.getCuppingsForCafe(cafeId);
+      return (actor as any).getCuppingsForCafe(cafeId);
     },
     enabled: !!actor && !isFetching && !!cafeId,
   });
@@ -280,7 +291,7 @@ export function useExportCafeData() {
   return useMutation({
     mutationFn: async (cafeId: CafeId) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.exportCafeData(cafeId);
+      return (actor as any).exportCafeData(cafeId);
     },
   });
 }
@@ -304,7 +315,7 @@ export function useIsAdmin() {
     queryFn: async () => {
       if (!actor) return false;
       try {
-        return await actor.isAdmin();
+        return await (actor as any).isAdmin();
       } catch {
         return false;
       }
@@ -332,7 +343,7 @@ export function useIsCallerAdmin() {
     queryFn: async () => {
       if (!actor) return false;
       try {
-        return await actor.isAdmin();
+        return await (actor as any).isAdmin();
       } catch {
         return false;
       }
@@ -351,7 +362,7 @@ export function useGetDailyStats() {
     queryKey: ["dailyStats"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getDailyStats();
+      return (actor as any).getDailyStats();
     },
     enabled: !!actor && !isFetching && !!identity && isAdmin,
   });
@@ -491,7 +502,7 @@ export function useSeedDemoCafes() {
       const ownerPrincipal = identity.getPrincipal();
 
       for (const cafeData of DEMO_CAFES) {
-        const cafe = await actor.createCafeProfile(
+        const cafe = await (actor as any).createCafeProfile(
           ownerPrincipal,
           cafeData.name,
           cafeData.latitude,
@@ -501,7 +512,7 @@ export function useSeedDemoCafes() {
         );
 
         for (const coffee of cafeData.coffees) {
-          await actor.addCoffeeToCafe(cafe.id, coffee);
+          await (actor as any).addCoffeeToCafe(cafe.id, coffee);
         }
       }
     },

@@ -27,8 +27,12 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CafeProfile, Coffee as CoffeeType, QRCodeData } from "../backend";
 import { useGenerateQRCode, useGetFilteredCafes } from "../hooks/useQueries";
+import type {
+  CafeProfile,
+  Coffee as CoffeeType,
+  QRCodeData,
+} from "../types/backend-types";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -402,9 +406,7 @@ export default function MapView() {
   };
 
   const qrExpiryDisplay = qrResult
-    ? new Date(
-        Number(qrResult.timestamp) / 1_000_000 + 24 * 60 * 60 * 1000,
-      ).toLocaleString()
+    ? new Date(Number(qrResult.expiryTime) / 1_000_000).toLocaleString()
     : null;
 
   const handleResetFilters = () => {

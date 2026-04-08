@@ -8,20 +8,16 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const _CaffeineStorageCreateCertificateResult = IDL.Record({
+export const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
   'method' : IDL.Text,
   'blob_hash' : IDL.Text,
 });
-export const _CaffeineStorageRefillInformation = IDL.Record({
+export const _ImmutableObjectStorageRefillInformation = IDL.Record({
   'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
 });
-export const _CaffeineStorageRefillResult = IDL.Record({
+export const _ImmutableObjectStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
-});
-export const Location = IDL.Record({
-  'latitude' : IDL.Float64,
-  'longitude' : IDL.Float64,
 });
 export const CafeId = IDL.Text;
 export const CoffeeId = IDL.Text;
@@ -40,6 +36,7 @@ export const UserRole = IDL.Variant({
 export const CoffeeScores = IDL.Record({
   'acidity' : IDL.Float64,
   'balance' : IDL.Float64,
+  'aroma' : IDL.Float64,
   'cleanCup' : IDL.Float64,
   'sweetness' : IDL.Float64,
   'flavor' : IDL.Float64,
@@ -49,7 +46,10 @@ export const CoffeeScores = IDL.Record({
   'uniformity' : IDL.Float64,
   'aftertaste' : IDL.Float64,
 });
-export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const Location = IDL.Record({
+  'latitude' : IDL.Float64,
+  'longitude' : IDL.Float64,
+});
 export const CafeProfile = IDL.Record({
   'id' : CafeId,
   'averageScores' : CoffeeScores,
@@ -59,7 +59,6 @@ export const CafeProfile = IDL.Record({
   'availableFreeCups' : IDL.Nat,
   'roastLevel' : IDL.Text,
   'location' : Location,
-  'photos' : IDL.Vec(ExternalBlob),
 });
 export const QRCodeId = IDL.Text;
 export const Timestamp = IDL.Int;
@@ -68,8 +67,8 @@ export const QRCodeData = IDL.Record({
   'redemptionTimestamp' : IDL.Opt(Timestamp),
   'cafe' : CafeId,
   'redeemed' : IDL.Bool,
+  'expiryTime' : Timestamp,
   'user' : IDL.Principal,
-  'timestamp' : Timestamp,
   'coffee' : CoffeeId,
 });
 export const CuppingHistory = IDL.Record({
@@ -97,6 +96,7 @@ export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'level' : Level,
   'progress' : IDL.Nat,
+  'phoneNumber' : IDL.Opt(IDL.Text),
 });
 export const CuppingId = IDL.Text;
 export const IntensityLevels = IDL.Record({
@@ -114,8 +114,7 @@ export const CuppingSubmission = IDL.Record({
   'user' : IDL.Principal,
   'timestamp' : Timestamp,
   'qrCodeId' : QRCodeId,
-  'photo' : IDL.Opt(ExternalBlob),
-  'coffee' : CoffeeId,
+  'coffeeId' : CoffeeId,
   'intensityLevels' : IntensityLevels,
 });
 export const DailyStats = IDL.Record({
@@ -126,33 +125,33 @@ export const DailyStats = IDL.Record({
 });
 
 export const idlService = IDL.Service({
-  '_caffeineStorageBlobIsLive' : IDL.Func(
-      [IDL.Vec(IDL.Nat8)],
-      [IDL.Bool],
+  '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+      [IDL.Vec(IDL.Vec(IDL.Nat8))],
+      [IDL.Vec(IDL.Bool)],
       ['query'],
     ),
-  '_caffeineStorageBlobsToDelete' : IDL.Func(
+  '_immutableObjectStorageBlobsToDelete' : IDL.Func(
       [],
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       ['query'],
     ),
-  '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+  '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
       [IDL.Vec(IDL.Vec(IDL.Nat8))],
       [],
       [],
     ),
-  '_caffeineStorageCreateCertificate' : IDL.Func(
+  '_immutableObjectStorageCreateCertificate' : IDL.Func(
       [IDL.Text],
-      [_CaffeineStorageCreateCertificateResult],
+      [_ImmutableObjectStorageCreateCertificateResult],
       [],
     ),
-  '_caffeineStorageRefillCashier' : IDL.Func(
-      [IDL.Opt(_CaffeineStorageRefillInformation)],
-      [_CaffeineStorageRefillResult],
+  '_immutableObjectStorageRefillCashier' : IDL.Func(
+      [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+      [_ImmutableObjectStorageRefillResult],
       [],
     ),
-  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-  '_dummyUpdateLocation' : IDL.Func([Location], [], []),
+  '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'addCoffeeToCafe' : IDL.Func([CafeId, Coffee], [], []),
   'assignCafeOwner' : IDL.Func([CafeId, IDL.Principal], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -187,21 +186,19 @@ export const idlService = IDL.Service({
       [IDL.Vec(CafeProfile)],
       ['query'],
     ),
-  'getProfile' : IDL.Func([IDL.Principal], [IDL.Opt(UserProfile)], ['query']),
   'getQRCode' : IDL.Func([QRCodeId], [IDL.Opt(QRCodeData)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
-  'initializeAccessControl' : IDL.Func([], [], []),
   'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'redeemQRCode' : IDL.Func([QRCodeId], [], []),
   'removeCoffeeFromCafe' : IDL.Func([CafeId, CoffeeId], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'submitCuppingForm' : IDL.Func(
-      [QRCodeId, CoffeeScores, IntensityLevels, IDL.Opt(ExternalBlob)],
+      [QRCodeId, CoffeeScores, IntensityLevels],
       [],
       [],
     ),
@@ -211,20 +208,16 @@ export const idlService = IDL.Service({
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const _CaffeineStorageCreateCertificateResult = IDL.Record({
+  const _ImmutableObjectStorageCreateCertificateResult = IDL.Record({
     'method' : IDL.Text,
     'blob_hash' : IDL.Text,
   });
-  const _CaffeineStorageRefillInformation = IDL.Record({
+  const _ImmutableObjectStorageRefillInformation = IDL.Record({
     'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
   });
-  const _CaffeineStorageRefillResult = IDL.Record({
+  const _ImmutableObjectStorageRefillResult = IDL.Record({
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
-  });
-  const Location = IDL.Record({
-    'latitude' : IDL.Float64,
-    'longitude' : IDL.Float64,
   });
   const CafeId = IDL.Text;
   const CoffeeId = IDL.Text;
@@ -243,6 +236,7 @@ export const idlFactory = ({ IDL }) => {
   const CoffeeScores = IDL.Record({
     'acidity' : IDL.Float64,
     'balance' : IDL.Float64,
+    'aroma' : IDL.Float64,
     'cleanCup' : IDL.Float64,
     'sweetness' : IDL.Float64,
     'flavor' : IDL.Float64,
@@ -252,7 +246,10 @@ export const idlFactory = ({ IDL }) => {
     'uniformity' : IDL.Float64,
     'aftertaste' : IDL.Float64,
   });
-  const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const Location = IDL.Record({
+    'latitude' : IDL.Float64,
+    'longitude' : IDL.Float64,
+  });
   const CafeProfile = IDL.Record({
     'id' : CafeId,
     'averageScores' : CoffeeScores,
@@ -262,7 +259,6 @@ export const idlFactory = ({ IDL }) => {
     'availableFreeCups' : IDL.Nat,
     'roastLevel' : IDL.Text,
     'location' : Location,
-    'photos' : IDL.Vec(ExternalBlob),
   });
   const QRCodeId = IDL.Text;
   const Timestamp = IDL.Int;
@@ -271,8 +267,8 @@ export const idlFactory = ({ IDL }) => {
     'redemptionTimestamp' : IDL.Opt(Timestamp),
     'cafe' : CafeId,
     'redeemed' : IDL.Bool,
+    'expiryTime' : Timestamp,
     'user' : IDL.Principal,
-    'timestamp' : Timestamp,
     'coffee' : CoffeeId,
   });
   const CuppingHistory = IDL.Record({
@@ -300,6 +296,7 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'level' : Level,
     'progress' : IDL.Nat,
+    'phoneNumber' : IDL.Opt(IDL.Text),
   });
   const CuppingId = IDL.Text;
   const IntensityLevels = IDL.Record({
@@ -317,8 +314,7 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Principal,
     'timestamp' : Timestamp,
     'qrCodeId' : QRCodeId,
-    'photo' : IDL.Opt(ExternalBlob),
-    'coffee' : CoffeeId,
+    'coffeeId' : CoffeeId,
     'intensityLevels' : IntensityLevels,
   });
   const DailyStats = IDL.Record({
@@ -329,33 +325,33 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
-    '_caffeineStorageBlobIsLive' : IDL.Func(
-        [IDL.Vec(IDL.Nat8)],
-        [IDL.Bool],
+    '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Bool)],
         ['query'],
       ),
-    '_caffeineStorageBlobsToDelete' : IDL.Func(
+    '_immutableObjectStorageBlobsToDelete' : IDL.Func(
         [],
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         ['query'],
       ),
-    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
+    '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
         [IDL.Vec(IDL.Vec(IDL.Nat8))],
         [],
         [],
       ),
-    '_caffeineStorageCreateCertificate' : IDL.Func(
+    '_immutableObjectStorageCreateCertificate' : IDL.Func(
         [IDL.Text],
-        [_CaffeineStorageCreateCertificateResult],
+        [_ImmutableObjectStorageCreateCertificateResult],
         [],
       ),
-    '_caffeineStorageRefillCashier' : IDL.Func(
-        [IDL.Opt(_CaffeineStorageRefillInformation)],
-        [_CaffeineStorageRefillResult],
+    '_immutableObjectStorageRefillCashier' : IDL.Func(
+        [IDL.Opt(_ImmutableObjectStorageRefillInformation)],
+        [_ImmutableObjectStorageRefillResult],
         [],
       ),
-    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-    '_dummyUpdateLocation' : IDL.Func([Location], [], []),
+    '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'addCoffeeToCafe' : IDL.Func([CafeId, Coffee], [], []),
     'assignCafeOwner' : IDL.Func([CafeId, IDL.Principal], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -390,21 +386,19 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(CafeProfile)],
         ['query'],
       ),
-    'getProfile' : IDL.Func([IDL.Principal], [IDL.Opt(UserProfile)], ['query']),
     'getQRCode' : IDL.Func([QRCodeId], [IDL.Opt(QRCodeData)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
-    'initializeAccessControl' : IDL.Func([], [], []),
     'isAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'redeemQRCode' : IDL.Func([QRCodeId], [], []),
     'removeCoffeeFromCafe' : IDL.Func([CafeId, CoffeeId], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'submitCuppingForm' : IDL.Func(
-        [QRCodeId, CoffeeScores, IntensityLevels, IDL.Opt(ExternalBlob)],
+        [QRCodeId, CoffeeScores, IntensityLevels],
         [],
         [],
       ),
